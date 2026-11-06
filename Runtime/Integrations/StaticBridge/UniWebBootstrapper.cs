@@ -29,8 +29,7 @@ namespace UniWebKit
                     break;
 
                 case UniWebSettings.TargetPlatform.GamePush:
-#if UNIWEB_GAMEDISTRIBUTION
-                    // GD умеет только в рекламу. Перезаписываем только её.
+#if UNIWEB_GAMEPUSH
                     // Лидерборды останутся пустышкой!
                     ads = new GamePushAdvProvider();
 #endif
