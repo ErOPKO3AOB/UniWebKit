@@ -63,9 +63,6 @@ namespace UniWebKit
                 case UniWebSettings.TargetPlatform.GamePush:
                     defines.Add("UNIWEB_GAMEPUSH");
                     break;
-                case UniWebSettings.TargetPlatform.GameDistribution:
-                    defines.Add("UNIWEB_GAMEDISTRIBUTION");
-                    break;
                 case UniWebSettings.TargetPlatform.PluginYG2:
                     defines.Add("UNIWEB_PLUGIN_YG2");
                     break;

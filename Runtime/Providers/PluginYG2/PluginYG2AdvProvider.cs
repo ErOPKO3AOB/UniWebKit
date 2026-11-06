@@ -6,6 +6,15 @@ namespace UniWebKit
 {
     public class PluginYG2AdvProvider : IAdvProvider
     {
+        // Проверяем кулдаун таймера фулскрин рекламы в YG2 (и что сейчас не открыта другая реклама)
+        public bool IsInterstitialReady => YG2.isTimerAdvCompleted && !YG2.nowAdsShow;
+
+        // Яндекс не отдает статус предзагрузки реварда заранее, проверяем только отсутствие активной рекламы
+        public bool IsRewardedReady => !YG2.nowAdsShow;
+
+        // Из коробки YG2 не детектит AdBlock
+        public bool IsAdBlockEnabled => false;
+
         public void ShowInterstitial(Action onOpened = null, Action<bool> onClosed = null, Action<string> onError = null)
         {
             void OnOpen()
@@ -16,16 +25,22 @@ namespace UniWebKit
 
             void OnClose()
             {
-                YG2.onCloseInterAdv -= OnClose;
-                YG2.onErrorInterAdv -= OnError;
+                Cleanup();
                 onClosed?.Invoke(true);
             }
 
             void OnError()
             {
-                YG2.onErrorInterAdv -= OnError;
-                YG2.onCloseInterAdv -= OnClose;
+                Cleanup();
                 onError?.Invoke("Ошибка показа Interstitial YG2");
+                onClosed?.Invoke(false);
+            }
+
+            void Cleanup()
+            {
+                YG2.onOpenInterAdv -= OnOpen;
+                YG2.onCloseInterAdv -= OnClose;
+                YG2.onErrorInterAdv -= OnError;
             }
 
             YG2.onOpenInterAdv += OnOpen;
@@ -35,7 +50,7 @@ namespace UniWebKit
             YG2.InterstitialAdvShow();
         }
 
-        public void ShowRewarded(Action onReward, Action onOpened = null, Action<bool> onClosed = null, Action<string> onError = null)
+        public void ShowRewarded(Action onReward, Action onOpened = null, Action<bool> onClosed = null, Action<string> onError = null, string placementId = "default")
         {
             void OnOpen()
             {
@@ -43,25 +58,34 @@ namespace UniWebKit
                 onOpened?.Invoke();
             }
 
-            void OnReward(string reward)
+            void OnReward(string id)
             {
-                YG2.onRewardAdv -= OnReward;
-                onReward?.Invoke();
+                if (id == placementId)
+                {
+                    YG2.onRewardAdv -= OnReward;
+                    onReward?.Invoke();
+                }
             }
 
             void OnClose()
             {
-                YG2.onCloseRewardedAdv -= OnClose;
-                YG2.onErrorRewardedAdv -= OnError;
-
+                Cleanup();
                 onClosed?.Invoke(true);
             }
 
             void OnError()
             {
-                YG2.onErrorRewardedAdv -= OnError;
-                YG2.onCloseRewardedAdv -= OnClose;
+                Cleanup();
                 onError?.Invoke("Ошибка показа Rewarded YG2");
+                onClosed?.Invoke(false);
+            }
+
+            void Cleanup()
+            {
+                YG2.onOpenRewardedAdv -= OnOpen;
+                YG2.onRewardAdv -= OnReward;
+                YG2.onCloseRewardedAdv -= OnClose;
+                YG2.onErrorRewardedAdv -= OnError;
             }
 
             YG2.onOpenRewardedAdv += OnOpen;
@@ -69,7 +93,17 @@ namespace UniWebKit
             YG2.onCloseRewardedAdv += OnClose;
             YG2.onErrorRewardedAdv += OnError;
 
-            YG2.RewardedAdvShow("0");
+            YG2.RewardedAdvShow(placementId);
+        }
+
+        public void ShowStickyBanner()
+        {
+            YG2.StickyAdActivity(true);
+        }
+
+        public void HideStickyBanner()
+        {
+            YG2.StickyAdActivity(false);
         }
     }
 }

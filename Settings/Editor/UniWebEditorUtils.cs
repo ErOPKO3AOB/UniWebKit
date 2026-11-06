@@ -10,7 +10,6 @@ namespace UniWebKit
     {
         private const string SettingsFileName = "UniWebSettings.asset";
 
-        // Указываем новый путь внутри папки плагина
         private const string ResourcesFolderPath = "Assets/UniWebKit/Resources";
         private const string SettingsAssetPath = ResourcesFolderPath + "/" + SettingsFileName;
 
@@ -21,11 +20,10 @@ namespace UniWebKit
 
             settings = ScriptableObject.CreateInstance<UniWebSettings>();
 
-            // Безопасно создаем всю иерархию папок, если её нет
             if (!AssetDatabase.IsValidFolder(ResourcesFolderPath))
             {
                 Directory.CreateDirectory(ResourcesFolderPath);
-                AssetDatabase.Refresh(); // Заставляем Unity увидеть новые папки
+                AssetDatabase.Refresh();
             }
 
             AssetDatabase.CreateAsset(settings, SettingsAssetPath);
@@ -47,9 +45,6 @@ namespace UniWebKit
             {
                 case UniWebSettings.TargetPlatform.GamePush:
                     defines.Add("UNIWEB_GAMEPUSH");
-                    break;
-                case UniWebSettings.TargetPlatform.GameDistribution:
-                    defines.Add("UNIWEB_GAMEDISTRIBUTION");
                     break;
                 case UniWebSettings.TargetPlatform.PluginYG2:
                     defines.Add("UNIWEB_PLUGIN_YG2");

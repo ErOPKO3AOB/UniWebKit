@@ -5,13 +5,13 @@ namespace UniWebKit
     [CreateAssetMenu(fileName = "UniWebSettings", menuName = "UniWeb/Settings")]
     public class UniWebSettings : ScriptableObject
     {
-        public enum TargetPlatform { Custom, GamePush, GameDistribution, PluginYG2 }
+        public enum TargetPlatform { Custom, GamePush, PluginYG2 }
 
         public TargetPlatform CurrentPlatform = TargetPlatform.Custom;
 
         public enum ArchitectureMode { Static, VContainer }
 
-        [Tooltip("StaticBridge собирает всё в статический UniWebBridge. VContainer отключает автосборку для чистой DI-регистрации.")]
+        [Tooltip("StaticBridge собирает всё в статический UniWebBridge. VContainer отключает автосборку для чистой DI-регистрации вручную.")]
         public ArchitectureMode Architecture = ArchitectureMode.Static;
 
         [Tooltip("Если включено, плагин сам соберет зависимости в статический класс UniWebAPI при старте игры.")]
