@@ -1,0 +1,20 @@
+{
+  "name": "com.erop-k.unifiedwebgameskit",
+  "version": "1.0.0",
+  "displayName": "Unified Web Games Kit",
+  "description": "Унифицированный API для WebGL игр в Unity. Поддерживает простое использование через статический класс и интеграцию с VContainer (DI).",
+  "unity": "2021.3",
+  "author": {
+    "name": "EROP-K",
+    "url": "https://github.com/ErOPKO3AOB"
+  },
+  "keywords": [
+    "web",
+    "webgl",
+    "gamepush",
+    "yandex",
+    "pluginyg2",
+    "vcontainer",
+    "sdk"
+  ]
+}
