@@ -4,9 +4,9 @@ namespace UniWebKit
 {
     public static class UniWebBridge
     {
-        public static void Initialize(IAdvProvider ads)
+        public static void Initialize(IAdvProvider ads = null)
         {
-            Ads = ads;
+            Ads = ads != null ? ads : new UnsupportedAdvProvider();
             //Player = player;
             IsInitialized = true;
         }
