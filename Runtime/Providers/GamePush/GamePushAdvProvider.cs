@@ -4,15 +4,15 @@ using System;
 
 namespace UniWebKit
 {
-    public class GamePushAdvProvider : IAdvProvider
+    public class GamePushAdvProvider : AdvProviderBase
     {
-        public bool IsInterstitialReady => GP_Ads.IsFullscreenAvailable();
+        public override bool IsInterstitialReady => GP_Ads.IsFullscreenAvailable();
 
-        public bool IsRewardedReady => GP_Ads.IsRewardedAvailable();
+        public override bool IsRewardedReady => GP_Ads.IsRewardedAvailable();
 
-        public bool IsAdBlockEnabled => GP_Ads.IsAdblockEnabled();
+        public override bool IsAdBlockEnabled => GP_Ads.IsAdblockEnabled();
 
-        public void ShowInterstitial(Action onOpened = null, Action<bool> onClosed = null, Action<string> onError = null)
+        public override void ShowInterstitial(Action onOpened = null, Action<bool> onClosed = null, Action<string> onError = null)
         {
             void OnClose(bool success)
             {
@@ -26,7 +26,7 @@ namespace UniWebKit
             GP_Ads.ShowFullscreen(onOpened, OnClose);
         }
 
-        public void ShowRewarded(Action onReward, Action onOpened = null, Action<bool> onClosed = null, Action<string> onError = null, string placementId = "default")
+        public override void ShowRewarded(Action onReward, Action onOpened = null, Action<bool> onClosed = null, Action<string> onError = null, string placementId = "default")
         {
             // GamePush передает строковый тег награды в колбэк
             void OnReward(string tag)
@@ -46,12 +46,12 @@ namespace UniWebKit
             GP_Ads.ShowRewarded(placementId, OnReward, onOpened, OnClose);
         }
 
-        public void ShowStickyBanner()
+        public override void ShowStickyBanner()
         {
             GP_Ads.ShowSticky();
         }
 
-        public void HideStickyBanner()
+        public override void HideStickyBanner()
         {
             GP_Ads.CloseSticky();
         }

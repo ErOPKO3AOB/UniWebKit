@@ -1,6 +1,10 @@
 #if UNIWEB_ARCHITECTURE_VCONTAINER
 using VContainer;
 using UnityEngine;
+using UniWebKit.Core;
+using UniWebKit.Settings;
+
+// ... (юзинги платформ)
 
 namespace UniWebKit
 {
@@ -8,30 +12,33 @@ namespace UniWebKit
     {
         public static void RegisterUniWeb(this IContainerBuilder builder)
         {
-            // Загружаем настройки прямо из Resources
             var settings = Resources.Load<UniWebSettings>("UniWebSettings");
+            if (settings == null) return;
 
-            if (settings == null)
-            {
-                Debug.LogError("[UniWeb API] Не удалось найти UniWebSettings в папке Resources! Провайдеры не зарегистрированы.");
-                return;
-            }
+            // 1. СТЕЛЕМ СОЛОМКУ (Shadow Fallbacks)
+            // Регистрируем "пустышки" для всех фичей плагина. 
+            // Если платформа ниже их не перезапишет, игра получит эти безопасные заглушки с IsSupported = false.
+            builder.Register<UnsupportedAdvProvider>(Lifetime.Singleton).As<IAdvProvider>();
+            builder.Register<UnsupportedLeaderboardProvider>(Lifetime.Singleton).As<ILeaderboardProvider>();
+            // builder.Register<LocalPrefsPlayerProvider>(Lifetime.Singleton).As<IPlayerProvider>(); // Для сохранений локальный фолбэк
 
+            // 2. ПЕРЕЗАПИСЫВАЕМ ТЕМ, ЧТО РЕАЛЬНО ЕСТЬ
             switch (settings.CurrentPlatform)
             {
-                case UniWebSettings.TargetPlatform.GamePush:
-#if UNIWEB_GAMEPUSH
-                    builder.Register<GamePushAdvProvider>(Lifetime.Singleton).As<IAdvProvider>();
-#else
-                    Debug.LogError("[UniWeb API] Выбран GamePush, но дефайн UNIWEB_GAMEPUSH не активен!");
+                case UniWebSettings.TargetPlatform.PluginYG2:
+#if UNIWEB_PLUGIN_YG2
+                    // Яндекс умеет всё. Он перезапишет ВСЕ дефолтные заглушки своими реализациями.
+                    builder.Register<PluginYG2AdvProvider>(Lifetime.Singleton).As<IAdvProvider>();
+                    builder.Register<PluginYG2LeaderboardProvider>(Lifetime.Singleton).As<ILeaderboardProvider>();
 #endif
                     break;
 
-                case UniWebSettings.TargetPlatform.PluginYG2:
-#if UNIWEB_PLUGIN_YG2
-                    builder.Register<PluginYG2AdvProvider>(Lifetime.Singleton).As<IAdvProvider>();
-#else
-                    Debug.LogError("[UniWeb API] Выбран PluginYG2, но дефайн UNIWEB_PLUGIN_YG2 не активен!");
+                case UniWebSettings.TargetPlatform.GameDistribution:
+#if UNIWEB_GAMEDISTRIBUTION
+                    // GameDistribution имеет ТОЛЬКО рекламу. 
+                    // Мы регистрируем только AdvProvider. 
+                    // Лидерборды останутся от UnsupportedLeaderboardProvider! Никаких крашей.
+                    builder.Register<GameDistributionAdvProvider>(Lifetime.Singleton).As<IAdvProvider>();
 #endif
                     break;
             }

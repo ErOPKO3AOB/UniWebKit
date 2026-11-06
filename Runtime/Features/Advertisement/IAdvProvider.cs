@@ -2,7 +2,7 @@ using System;
 
 namespace UniWebKit
 {
-    public interface IAdvProvider
+    public interface IAdvProvider : IUniWebFeature
     {
         bool IsInterstitialReady { get; }
         bool IsRewardedReady { get; }

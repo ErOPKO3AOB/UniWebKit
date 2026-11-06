@@ -4,18 +4,15 @@ using YG;
 
 namespace UniWebKit
 {
-    public class PluginYG2AdvProvider : IAdvProvider
+    public class PluginYG2AdvProvider : AdvProviderBase
     {
         // Проверяем кулдаун таймера фулскрин рекламы в YG2 (и что сейчас не открыта другая реклама)
-        public bool IsInterstitialReady => YG2.isTimerAdvCompleted && !YG2.nowAdsShow;
+        public override bool IsInterstitialReady => YG2.isTimerAdvCompleted && !YG2.nowAdsShow;
 
         // Яндекс не отдает статус предзагрузки реварда заранее, проверяем только отсутствие активной рекламы
-        public bool IsRewardedReady => !YG2.nowAdsShow;
+        public override bool IsRewardedReady => !YG2.nowAdsShow;
 
-        // Из коробки YG2 не детектит AdBlock
-        public bool IsAdBlockEnabled => false;
-
-        public void ShowInterstitial(Action onOpened = null, Action<bool> onClosed = null, Action<string> onError = null)
+        public override void ShowInterstitial(Action onOpened = null, Action<bool> onClosed = null, Action<string> onError = null)
         {
             void OnOpen()
             {
@@ -50,7 +47,7 @@ namespace UniWebKit
             YG2.InterstitialAdvShow();
         }
 
-        public void ShowRewarded(Action onReward, Action onOpened = null, Action<bool> onClosed = null, Action<string> onError = null, string placementId = "default")
+        public override void ShowRewarded(Action onReward, Action onOpened = null, Action<bool> onClosed = null, Action<string> onError = null, string placementId = "default")
         {
             void OnOpen()
             {
@@ -96,12 +93,12 @@ namespace UniWebKit
             YG2.RewardedAdvShow(placementId);
         }
 
-        public void ShowStickyBanner()
+        public override void ShowStickyBanner()
         {
             YG2.StickyAdActivity(true);
         }
 
-        public void HideStickyBanner()
+        public override void HideStickyBanner()
         {
             YG2.StickyAdActivity(false);
         }
