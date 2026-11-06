@@ -4,6 +4,7 @@ namespace UniWebKit
 {
     public static class UniWebBridge
     {
+        // For INIT
         public static void Initialize(IAdvProvider ads = null)
         {
             Ads = ads != null ? ads : new UnsupportedAdvProvider();
