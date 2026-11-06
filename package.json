@@ -1,7 +1,7 @@
 {
-  "name": "com.erop-k.unifiedwebgameskit",
+  "name": "com.erop-k.uniwebkit",
   "version": "1.0.0",
-  "displayName": "Unified Web Games Kit",
+  "displayName": "UniWebKit",
   "description": "Унифицированный API для WebGL игр в Unity. Поддерживает простое использование через статический класс и интеграцию с VContainer (DI).",
   "unity": "2021.3",
   "author": {
