@@ -15,6 +15,7 @@ namespace UniWebKit
 
             // 1. СТЕЛЕМ СОЛОМКУ: Создаем безопасные "глухие" реализации по умолчанию
             IAdvProvider ads = new UnsupportedAdvProvider();
+            IInAppProvider inApps = new UnsupportedInAppProvider();
             //ILeaderboardProvider leaderboards = new UnsupportedLeaderboardProvider();
             // IPlayerProvider player = new LocalPrefsPlayerProvider();
 
@@ -32,12 +33,13 @@ namespace UniWebKit
 #if UNIWEB_GAMEPUSH
                     // Лидерборды останутся пустышкой!
                     ads = new GamePushAdvProvider();
+                    inApps = new GamePushInAppProvider();
 #endif
                     break;
             }
 
             // 3. Отправляем в мост
-            UniWebBridge.Initialize(ads/*, leaderboards , player */);
+            UniWebBridge.Initialize(ads, inApps);
         }
     }
 }

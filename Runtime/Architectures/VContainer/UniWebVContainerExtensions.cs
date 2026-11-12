@@ -8,6 +8,7 @@ namespace UniWebKit
     {
         public static void RegisterUniWeb(this IContainerBuilder builder)
         {
+            builder.Register<UnsupportedInAppProvider>(Lifetime.Singleton).As<IInAppProvider>();
             var settings = Resources.Load<UniWebSettings>("UniWebSettings");
             if (settings == null) return;
 
@@ -35,6 +36,7 @@ namespace UniWebKit
                     // Мы регистрируем только AdvProvider. 
                     // Лидерборды останутся от UnsupportedLeaderboardProvider! Никаких крашей.
                     builder.Register<GamePushAdvProvider>(Lifetime.Singleton).As<IAdvProvider>();
+                    builder.Register<GamePushInAppProvider>(Lifetime.Singleton).As<IInAppProvider>();
 #endif
                     break;
             }
