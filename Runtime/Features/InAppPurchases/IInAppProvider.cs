@@ -21,8 +21,9 @@ namespace UniWebKit
 
         void Purchase(string productId, Action<InAppPurchase> onSuccess = null, Action<InAppError> onError = null);
 
-        // Grant and persist the reward before consuming. Permanent purchases must remain unconsumed.
-        // Consult ConsumeMode: not every SDK can target an individual receipt.
+        // For manual consume modes, grant and persist the reward before consuming.
+        // Automatic means that the SDK starts consumption during Purchase; do not consume it twice.
+        // Permanent purchases must remain unconsumed; an Automatic SDK may not support that flow.
         void Consume(InAppPurchase purchase, Action onSuccess = null, Action<InAppError> onError = null);
 
         void Subscribe(string productId, Action<InAppPurchase> onSuccess = null, Action<InAppError> onError = null);

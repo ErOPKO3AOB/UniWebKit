@@ -25,6 +25,7 @@ namespace UniWebKit
                 case UniWebSettings.TargetPlatform.PluginYG2:
 #if UNIWEB_PLUGIN_YG2
                     ads = new PluginYG2AdvProvider();
+                    inApps = new PluginYG2InAppProvider();
                     // leaderboards = new PluginYG2LeaderboardProvider();
 #endif
                     break;

@@ -26,6 +26,7 @@ namespace UniWebKit
 #if UNIWEB_PLUGIN_YG2
                     // Яндекс умеет всё. Он перезапишет ВСЕ дефолтные заглушки своими реализациями.
                     builder.Register<PluginYG2AdvProvider>(Lifetime.Singleton).As<IAdvProvider>();
+                    builder.Register<PluginYG2InAppProvider>(Lifetime.Singleton).As<IInAppProvider>();
                     //builder.Register<PluginYG2LeaderboardProvider>(Lifetime.Singleton).As<ILeaderboardProvider>();
 #endif
                     break;

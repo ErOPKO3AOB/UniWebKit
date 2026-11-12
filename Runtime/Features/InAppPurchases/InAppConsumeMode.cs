@@ -4,6 +4,8 @@ namespace UniWebKit
     {
         None,
         ProductId,
-        PurchaseToken
+        PurchaseToken,
+        // The SDK initiates consumption during purchase. Save-before-consume cannot be guaranteed.
+        Automatic
     }
 }
