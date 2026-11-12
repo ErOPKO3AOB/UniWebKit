@@ -49,6 +49,9 @@ namespace UniWebKit
                 case UniWebSettings.TargetPlatform.PluginYG2:
                     defines.Add("UNIWEB_PLUGIN_YG2");
                     break;
+                case UniWebSettings.TargetPlatform.VKGames:
+                    defines.Add("UNIWEB_VK_GAMES");
+                    break;
             }
 
             defines.RemoveAll(d => d.StartsWith("UNIWEB_ARCH_"));

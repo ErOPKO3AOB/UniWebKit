@@ -8,39 +8,35 @@ namespace UniWebKit
     {
         public static void RegisterUniWeb(this IContainerBuilder builder)
         {
+            var settings = Resources.Load<UniWebSettings>("UniWebSettings");
+            // Shadow fallbacks remain valid even if the settings asset is absent.
+            builder.Register<UnsupportedAdvProvider>(Lifetime.Singleton).As<IAdvProvider>();
             builder.Register<UnsupportedInAppProvider>(Lifetime.Singleton).As<IInAppProvider>();
             builder.Register<UnityEnvirProvider>(Lifetime.Singleton).As<IEnvirProvider>();
-            var settings = Resources.Load<UniWebSettings>("UniWebSettings");
+            builder.Register<IPlayerProvider>(_ => new LocalPrefsPlayerProvider(settings?.PlayerStorage), Lifetime.Singleton);
             if (settings == null) return;
 
-            // 1. СТЕЛЕМ СОЛОМКУ (Shadow Fallbacks)
-            // Регистрируем "пустышки" для всех фичей плагина. 
-            // Если платформа ниже их не перезапишет, игра получит эти безопасные заглушки с IsSupported = false.
-            builder.Register<UnsupportedAdvProvider>(Lifetime.Singleton).As<IAdvProvider>();
-            //builder.Register<UnsupportedLeaderboardProvider>(Lifetime.Singleton).As<ILeaderboardProvider>();
-            // builder.Register<LocalPrefsPlayerProvider>(Lifetime.Singleton).As<IPlayerProvider>(); // Для сохранений локальный фолбэк
-
-            // 2. ПЕРЕЗАПИСЫВАЕМ ТЕМ, ЧТО РЕАЛЬНО ЕСТЬ
             switch (settings.CurrentPlatform)
             {
                 case UniWebSettings.TargetPlatform.PluginYG2:
 #if UNIWEB_PLUGIN_YG2
-                    // Яндекс умеет всё. Он перезапишет ВСЕ дефолтные заглушки своими реализациями.
                     builder.Register<PluginYG2AdvProvider>(Lifetime.Singleton).As<IAdvProvider>();
                     builder.Register<PluginYG2InAppProvider>(Lifetime.Singleton).As<IInAppProvider>();
                     builder.Register<PluginYG2EnvirProvider>(Lifetime.Singleton).As<IEnvirProvider>();
-                    //builder.Register<PluginYG2LeaderboardProvider>(Lifetime.Singleton).As<ILeaderboardProvider>();
+                    builder.Register<IPlayerProvider>(_ => new PluginYG2PlayerProvider(settings.PlayerStorage), Lifetime.Singleton);
 #endif
                     break;
-
                 case UniWebSettings.TargetPlatform.GamePush:
 #if UNIWEB_GAMEPUSH
-                    // GameDistribution имеет ТОЛЬКО рекламу. 
-                    // Мы регистрируем только AdvProvider. 
-                    // Лидерборды останутся от UnsupportedLeaderboardProvider! Никаких крашей.
                     builder.Register<GamePushAdvProvider>(Lifetime.Singleton).As<IAdvProvider>();
                     builder.Register<GamePushInAppProvider>(Lifetime.Singleton).As<IInAppProvider>();
                     builder.Register<GamePushEnvirProvider>(Lifetime.Singleton).As<IEnvirProvider>();
+                    builder.Register<IPlayerProvider>(_ => new GamePushPlayerProvider(settings.PlayerStorage), Lifetime.Singleton);
+#endif
+                    break;
+                case UniWebSettings.TargetPlatform.VKGames:
+#if UNIWEB_VK_GAMES
+                    builder.Register<IPlayerProvider>(_ => new VKGamesPlayerProvider(settings.PlayerStorage), Lifetime.Singleton);
 #endif
                     break;
             }

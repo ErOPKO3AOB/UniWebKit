@@ -1,0 +1,25 @@
+{
+  "name": "UniWebKit.UniTask",
+  "rootNamespace": "UniWebKit",
+  "references": [
+    "UniWebKit",
+    "UniTask"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [
+    "UNIWEB_UNITASK"
+  ],
+  "versionDefines": [
+    {
+      "name": "com.cysharp.unitask",
+      "expression": "2.0.0",
+      "define": "UNIWEB_UNITASK"
+    }
+  ],
+  "noEngineReferences": false
+}

@@ -40,6 +40,7 @@ namespace UniWebKit
                         EditorGUILayout.PropertyField(so.FindProperty("AutoInitializeStaticAPI")); //[cite: 13]
                     }
 
+                    EditorGUILayout.PropertyField(so.FindProperty("PlayerStorage"), true);
                     so.ApplyModifiedProperties();
                 }
             };
@@ -65,6 +66,9 @@ namespace UniWebKit
                     break;
                 case UniWebSettings.TargetPlatform.PluginYG2:
                     defines.Add("UNIWEB_PLUGIN_YG2");
+                    break;
+                case UniWebSettings.TargetPlatform.VKGames:
+                    defines.Add("UNIWEB_VK_GAMES");
                     break;
                     // Для Mock ничего не добавляем, он работает по умолчанию
             }

@@ -54,6 +54,7 @@ namespace UniWebKit
                 EditorGUILayout.PropertyField(_serializedSettings.FindProperty("AutoInitializeStaticAPI"));
             }
 
+            EditorGUILayout.PropertyField(_serializedSettings.FindProperty("PlayerStorage"), true);
             _serializedSettings.ApplyModifiedProperties();
 
             // Кнопка для ручного пинга (выделения) файла настроек в Project окне

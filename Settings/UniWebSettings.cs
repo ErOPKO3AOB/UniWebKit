@@ -5,9 +5,11 @@ namespace UniWebKit
     [CreateAssetMenu(fileName = "UniWebSettings", menuName = "UniWeb/Settings")]
     public class UniWebSettings : ScriptableObject
     {
-        public enum TargetPlatform { Custom, GamePush, PluginYG2 }
+        public enum TargetPlatform { Custom, GamePush, PluginYG2, VKGames }
 
         public TargetPlatform CurrentPlatform = TargetPlatform.Custom;
+
+        public PlayerStorageOptions PlayerStorage = new PlayerStorageOptions();
 
         public enum ArchitectureMode { Static, VContainer }
 
