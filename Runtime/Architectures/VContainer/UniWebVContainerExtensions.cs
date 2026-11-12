@@ -9,6 +9,7 @@ namespace UniWebKit
         public static void RegisterUniWeb(this IContainerBuilder builder)
         {
             builder.Register<UnsupportedInAppProvider>(Lifetime.Singleton).As<IInAppProvider>();
+            builder.Register<UnityEnvirProvider>(Lifetime.Singleton).As<IEnvirProvider>();
             var settings = Resources.Load<UniWebSettings>("UniWebSettings");
             if (settings == null) return;
 
@@ -27,6 +28,7 @@ namespace UniWebKit
                     // Яндекс умеет всё. Он перезапишет ВСЕ дефолтные заглушки своими реализациями.
                     builder.Register<PluginYG2AdvProvider>(Lifetime.Singleton).As<IAdvProvider>();
                     builder.Register<PluginYG2InAppProvider>(Lifetime.Singleton).As<IInAppProvider>();
+                    builder.Register<PluginYG2EnvirProvider>(Lifetime.Singleton).As<IEnvirProvider>();
                     //builder.Register<PluginYG2LeaderboardProvider>(Lifetime.Singleton).As<ILeaderboardProvider>();
 #endif
                     break;
@@ -38,6 +40,7 @@ namespace UniWebKit
                     // Лидерборды останутся от UnsupportedLeaderboardProvider! Никаких крашей.
                     builder.Register<GamePushAdvProvider>(Lifetime.Singleton).As<IAdvProvider>();
                     builder.Register<GamePushInAppProvider>(Lifetime.Singleton).As<IInAppProvider>();
+                    builder.Register<GamePushEnvirProvider>(Lifetime.Singleton).As<IEnvirProvider>();
 #endif
                     break;
             }

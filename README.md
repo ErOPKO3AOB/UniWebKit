@@ -105,6 +105,10 @@ GamePush поддерживает ручную консумацию: игра с
 
 ---
 
+## Окружение
+
+Тип устройства доступен через `UniWebBridge.Envir` или `IEnvirProvider` в VContainer: `IsMobile`, `IsDesktop`, `DeviceType`, `IsReady`. Реализованы GamePush, PluginYG2 и Unity-fallback. [Описание Envir](Documentation~/Environment.md).
+
 ## Создание кастомного провайдера
 
 Если нужной платформы еще нет из коробки, вы можете легко подключить свой SDK, не меняя исходники пакета:

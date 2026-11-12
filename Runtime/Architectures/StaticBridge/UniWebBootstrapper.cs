@@ -16,6 +16,7 @@ namespace UniWebKit
             // 1. СТЕЛЕМ СОЛОМКУ: Создаем безопасные "глухие" реализации по умолчанию
             IAdvProvider ads = new UnsupportedAdvProvider();
             IInAppProvider inApps = new UnsupportedInAppProvider();
+            IEnvirProvider envir = new UnityEnvirProvider();
             //ILeaderboardProvider leaderboards = new UnsupportedLeaderboardProvider();
             // IPlayerProvider player = new LocalPrefsPlayerProvider();
 
@@ -26,6 +27,7 @@ namespace UniWebKit
 #if UNIWEB_PLUGIN_YG2
                     ads = new PluginYG2AdvProvider();
                     inApps = new PluginYG2InAppProvider();
+                    envir = new PluginYG2EnvirProvider();
                     // leaderboards = new PluginYG2LeaderboardProvider();
 #endif
                     break;
@@ -35,12 +37,13 @@ namespace UniWebKit
                     // Лидерборды останутся пустышкой!
                     ads = new GamePushAdvProvider();
                     inApps = new GamePushInAppProvider();
+                    envir = new GamePushEnvirProvider();
 #endif
                     break;
             }
 
             // 3. Отправляем в мост
-            UniWebBridge.Initialize(ads, inApps);
+            UniWebBridge.Initialize(ads, inApps, envir);
         }
     }
 }
