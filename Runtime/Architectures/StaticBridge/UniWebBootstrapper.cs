@@ -4,7 +4,7 @@ using UnityEngine;
 // ... юзинги платформ
 
 namespace UniWebKit
-{
+{ 
     public static class UniWebBootstrapper
     {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]

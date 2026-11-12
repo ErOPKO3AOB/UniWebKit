@@ -3,7 +3,7 @@
     "rootNamespace": "UniWebKit",
     "references": [
         "VContainer",
-        "YG",
+        "YG2",
         "GamePush"
     ],
     "includePlatforms": [],
