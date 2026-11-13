@@ -6,6 +6,11 @@ var UniWebVKBridge = {
         bridge: null,
         initPromise: null,
         adBusy: false,
+        purchaseBusy: false,
+        viewHidden: false,
+        documentHidden: false,
+        domListenersAttached: false,
+        runtimeHosts: {},
         baitStarted: false,
         ads: {
             interstitial: { ready: false, checking: false, nextCheck: 0 },
@@ -37,7 +42,7 @@ var UniWebVKBridge = {
 
         checkAd: function(format) {
             var state = this.ads[format];
-            if (!state || this.adBusy || !this.supports('VKWebAppCheckNativeAds') ||
+            if (!state || this.adBusy || this.purchaseBusy || !this.supports('VKWebAppCheckNativeAds') ||
                 state.checking || Date.now() < state.nextCheck) return;
             state.checking = true;
             state.nextCheck = Date.now() + 5000;
@@ -75,33 +80,64 @@ var UniWebVKBridge = {
             var nextState = !!paused;
             if (this.isPaused === nextState) return;
             this.isPaused = nextState;
+            this.notifyHosts('OnVKPause', nextState ? '1' : '0');
             if (this.pauseCallbackPtr) {
                 {{{ makeDynCall('vi', 'this.pauseCallbackPtr') }}}(this.isPaused ? 1 : 0);
             }
         },
 
+        updatePause: function() {
+            this.setPaused(this.viewHidden || this.documentHidden || this.adBusy || this.purchaseBusy);
+        },
+
+        send: function(host, method, value) {
+            if (typeof SendMessage === 'function') SendMessage(host, method, value);
+            else if (typeof Module !== 'undefined' && Module.SendMessage) Module.SendMessage(host, method, value);
+        },
+
+        notifyHosts: function(method, value) {
+            for (var host in this.runtimeHosts)
+                if (Object.prototype.hasOwnProperty.call(this.runtimeHosts, host)) this.send(host, method, value);
+        },
+
+        reply: function(host, id, data, code, error) {
+            var response = data || {};
+            response.requestId = id;
+            response.success = !error;
+            response.errorCode = code || 0;
+            response.error = error || '';
+            this.send(host, 'OnVKReply', JSON.stringify(response));
+        },
+
         attachLifecycleListeners: function(bridge) {
-            if (this.listenersAttached) return;
-            this.listenersAttached = true;
             var self = this;
 
             // Нативные события перекрытия/восстановления окна от VK Bridge
-            if (bridge && typeof bridge.subscribe === 'function') {
+            if (!this.listenersAttached && bridge && typeof bridge.subscribe === 'function') {
+                this.listenersAttached = true;
                 bridge.subscribe(function(e) {
                     if (!e || !e.detail) return;
                     var type = e.detail.type;
                     if (type === 'VKWebAppViewHide') {
-                        self.setPaused(true);
+                        self.viewHidden = true;
+                        self.updatePause();
                     } else if (type === 'VKWebAppViewRestore') {
-                        self.setPaused(false);
+                        self.viewHidden = false;
+                        self.updatePause();
+                        self.notifyHosts('OnVKProfileInvalidated', '');
                     }
                 });
             }
 
             // Fallback на сворачивание вкладки в десктопном браузере
-            if (typeof document !== 'undefined') {
+            if (!this.domListenersAttached && typeof document !== 'undefined') {
+                this.domListenersAttached = true;
+                this.documentHidden = !!document.hidden;
+                this.updatePause();
                 document.addEventListener('visibilitychange', function() {
-                    self.setPaused(document.hidden);
+                    self.documentHidden = !!document.hidden;
+                    self.updatePause();
+                    if (!self.documentHidden) self.notifyHosts('OnVKProfileInvalidated', '');
                 });
             }
         },
@@ -206,13 +242,83 @@ var UniWebVKBridge = {
     UniWebVK_IsAdReady: function(formatPtr) {
         var format = UTF8ToString(formatPtr);
         var state = vkState.ads[format];
-        if (!state || vkState.adBusy || !vkState.supports('VKWebAppShowNativeAds')) return 0;
+        if (!state || vkState.adBusy || vkState.purchaseBusy || !vkState.supports('VKWebAppShowNativeAds')) return 0;
         vkState.checkAd(format);
         return state.ready ? 1 : 0;
     },
 
     UniWebVK_IsInitialized: function() {
         return vkState.initCompleted ? 1 : 0;
+    },
+
+    UniWebVK_SupportsMethod__deps: ['$UTF8ToString'],
+    UniWebVK_SupportsMethod: function(methodPtr) {
+        return vkState.supports(UTF8ToString(methodPtr)) ? 1 : 0;
+    },
+
+    UniWebVK_RegisterRuntime__deps: ['$UTF8ToString'],
+    UniWebVK_RegisterRuntime: function(hostPtr) {
+        var host = UTF8ToString(hostPtr);
+        vkState.runtimeHosts[host] = true;
+        vkState.attachLifecycleListeners(null);
+        vkState.send(host, 'OnVKPause', vkState.isPaused ? '1' : '0');
+        vkState.ensureBridge(function() {});
+    },
+
+    UniWebVK_UnregisterRuntime__deps: ['$UTF8ToString'],
+    UniWebVK_UnregisterRuntime: function(hostPtr) {
+        delete vkState.runtimeHosts[UTF8ToString(hostPtr)];
+    },
+
+    UniWebVK_Request__deps: ['$UTF8ToString'],
+    UniWebVK_Request: function(hostPtr, idPtr, operationPtr, valuePtr) {
+        var host = UTF8ToString(hostPtr), id = UTF8ToString(idPtr);
+        var operation = UTF8ToString(operationPtr), value = UTF8ToString(valuePtr);
+        vkState.ensureBridge(function(bridge) {
+            if (!bridge) { vkState.reply(host, id, null, 5, 'VK initialization failed.'); return; }
+            if (operation === 'init') { vkState.reply(host, id, {}, 0, null); return; }
+            var method = operation === 'profile' ? 'VKWebAppGetUserInfo'
+                : operation === 'purchase' ? 'VKWebAppShowOrderBox' : null;
+            if (!method || !vkState.supports(method)) {
+                vkState.reply(host, id, null, 0, 'This VK Bridge operation is unsupported.'); return;
+            }
+            if (operation === 'purchase' && (vkState.purchaseBusy || vkState.adBusy)) {
+                vkState.reply(host, id, null, 2, 'Another VK payment or advertisement is pending.'); return;
+            }
+            if (operation === 'purchase' && !value.trim()) {
+                vkState.reply(host, id, null, 3, 'A product ID is required.'); return;
+            }
+            if (operation === 'purchase') { vkState.purchaseBusy = true; vkState.updatePause(); }
+            var work = Promise.resolve().then(function() {
+                return bridge.send(method, operation === 'purchase' ? { type: 'item', item: value } : undefined);
+            });
+            if (operation === 'profile') work = vkState.withTimeout(work, 15000);
+            function release() {
+                if (operation !== 'purchase') return;
+                vkState.purchaseBusy = false;
+                vkState.updatePause();
+            }
+            work.then(function(data) {
+                release();
+                if (operation === 'profile') {
+                    if (!data || !data.id) { vkState.reply(host, id, null, 4, 'VK did not return a user ID.'); return; }
+                    vkState.reply(host, id, { id: String(data.id),
+                        name: ((data.first_name || '') + ' ' + (data.last_name || '')).trim(),
+                        avatar: data.photo_200 || data.photo_100 || '' }, 0, null);
+                } else if (data && data.status === 'chargeable' && data.order_id) {
+                    // Only the order-box result. Delivery and payment verification require server callbacks.
+                    vkState.reply(host, id, { orderId: String(data.order_id), status: 'chargeable' }, 0, null);
+                } else {
+                    var cancelled = data && data.status === 'cancel';
+                    vkState.reply(host, id, { status: cancelled ? 'cancel' : '' }, 4,
+                        cancelled ? 'VK order was cancelled.' : 'VK did not return a chargeable order ID.');
+                }
+            }, function(error) {
+                release();
+                var reason = error && (error.message || error.error_data && error.error_data.error_reason);
+                vkState.reply(host, id, null, 5, reason ? String(reason) : 'VK request failed.');
+            });
+        });
     },
 
     // =========================================================================
@@ -277,48 +383,11 @@ var UniWebVKBridge = {
 
     UniWebVK_PurchaseItem__deps: ['$UTF8ToString'],
     UniWebVK_PurchaseItem: function(itemIdPtr, onSuccessPtr, onErrorPtr) {
-        var itemId = UTF8ToString(itemIdPtr);
-
-        vkState.ensureBridge(function(bridge) {
-            if (!bridge) {
-                var noBridgePtr = vkState.allocString("VK Bridge is not available.");
-                {{{ makeDynCall('vi', 'onErrorPtr') }}}(noBridgePtr);
-                _free(noBridgePtr);
-                return;
-            }
-
-            bridge.send('VKWebAppShowOrderBox', {
-                type: 'item',
-                item: itemId
-            })
-            .then(function(data) {
-                if (data && (data.success === true || data.status === 'chargeable')) {
-                    var orderId = data.order_id ? String(data.order_id) : itemId;
-                    var itemOutPtr = vkState.allocString(itemId);
-                    var orderOutPtr = vkState.allocString(orderId);
-
-                    // Action<string, string> (itemId, orderId / purchaseToken)
-                    {{{ makeDynCall('vii', 'onSuccessPtr') }}}(itemOutPtr, orderOutPtr);
-
-                    _free(itemOutPtr);
-                    _free(orderOutPtr);
-                } else {
-                    var cancelPtr = vkState.allocString("Purchase was not completed.");
-                    {{{ makeDynCall('vi', 'onErrorPtr') }}}(cancelPtr);
-                    _free(cancelPtr);
-                }
-            })
-            .catch(function(error) {
-                var errMsg = (error && error.error_data && error.error_data.error_reason)
-                    ? error.error_data.error_reason
-                    : "VKWebAppShowOrderBox rejected or failed.";
-                var errPtr = vkState.allocString(errMsg);
-                {{{ makeDynCall('vi', 'onErrorPtr') }}}(errPtr);
-                _free(errPtr);
-            });
-        });
+        // Deprecated ABI cannot express Pending. Use UniWebVK_Request and server verification.
+        var message = vkState.allocString('Use UniWebVK_Request; an order-box result does not confirm delivery.');
+        if (onErrorPtr) {{{ makeDynCall('vi', 'onErrorPtr') }}}(message);
+        _free(message);
     },
-
     // =========================================================================
     // 5. ADV PROVIDER (Native Ads & Banner Ads)
     // =========================================================================
@@ -335,17 +404,19 @@ var UniWebVKBridge = {
             if (onErrorPtr) {{{ makeDynCall('vi', 'onErrorPtr') }}}(0);
             return;
         }
-        if (!state || !state.ready || vkState.adBusy || !vkState.supports('VKWebAppShowNativeAds')) {
+        if (!state || !state.ready || vkState.adBusy || vkState.purchaseBusy || !vkState.supports('VKWebAppShowNativeAds')) {
             if (onErrorPtr) {{{ makeDynCall('vi', 'onErrorPtr') }}}(1);
             return;
         }
         vkState.adBusy = true;
+        vkState.updatePause();
         state.ready = false;
         var completed = false;
         function finish(data, error) {
             if (completed) return;
             completed = true;
             vkState.adBusy = false;
+            vkState.updatePause();
             state.nextCheck = 0;
             vkState.checkAd(adFormat);
             if (error) {

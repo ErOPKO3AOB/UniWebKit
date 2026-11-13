@@ -69,6 +69,15 @@ static class Program
         Begin(replacement, null, _ => closed++, _ => errors++);
         Signal("OnAdError", 2);
         Check(Pending.GetValue(null) == null && errors == 2, "SDK error completes and releases lane");
+        VKGamesAdvProvider.PauseManagers = 1;
+        UnityEngine.AudioListener.pause = false;
+        Begin(replacement, null, _ => { }, _ => { });
+        Signal("OnAdOpened");
+        Check(!UnityEngine.AudioListener.pause, "resolved pause module owns game audio policy");
+        UnityEngine.AudioListener.pause = true; // A different pause reason became active.
+        Signal("OnAdResult", 1);
+        Check(UnityEngine.AudioListener.pause, "ad completion cannot undo another pause reason");
+        VKGamesAdvProvider.PauseManagers = 0;
         Console.WriteLine($"PASS: {checks} VK C# adapter checks");
     }
 }

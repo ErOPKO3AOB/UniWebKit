@@ -56,7 +56,8 @@ namespace UniWebKit
             if (!CheckReady(onError)) return;
             try { SetProducts(ReadProducts()); }
             catch (Exception exception) { onError?.Invoke(Failed(exception)); return; }
-            onSuccess?.Invoke(Products);
+            try { onSuccess?.Invoke(Products); }
+            finally { NotifyChanges(); }
         }
 
         public override void FetchPurchases(Action<IReadOnlyList<InAppPurchase>> onSuccess = null, Action<InAppError> onError = null)
@@ -64,7 +65,8 @@ namespace UniWebKit
             if (!CheckReady(onError)) return;
             try { SetPurchases(ReadPurchases()); }
             catch (Exception exception) { onError?.Invoke(Failed(exception)); return; }
-            onSuccess?.Invoke(Purchases);
+            try { onSuccess?.Invoke(Purchases); }
+            finally { NotifyChanges(); }
         }
 
         public override void Purchase(string productId, Action<InAppPurchase> onSuccess = null, Action<InAppError> onError = null)
@@ -113,7 +115,8 @@ namespace UniWebKit
                 // Payment success is authoritative even if reading the updated inventory fails.
                 var receipt = ReadConfirmedPurchase(product, knownPurchaseIds, subscription);
                 Cleanup();
-                onSuccess?.Invoke(receipt);
+                try { onSuccess?.Invoke(receipt); }
+                finally { NotifyChanges(); }
             }
 
             void OnError()
@@ -202,7 +205,8 @@ namespace UniWebKit
                     if (consume) RemoveCachedPurchase(purchase);
                 }
                 Cleanup();
-                onSuccess?.Invoke();
+                try { onSuccess?.Invoke(); }
+                finally { NotifyChanges(); }
             }
 
             void OnError()

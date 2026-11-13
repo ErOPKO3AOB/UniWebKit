@@ -5,6 +5,7 @@ using System.Collections.Generic;
 
 namespace UnityEngine
 {
+    public static class Debug { public static void LogException(Exception exception) { } }
     public enum SystemLanguage { Afrikaans, Arabic, Basque, Belarusian, Bulgarian, Catalan,
         Chinese, ChineseSimplified, ChineseTraditional, Czech, Danish, Dutch, Estonian,
         Faroese, Finnish, French, German, Greek, Hebrew, Hungarian, Icelandic, Indonesian,

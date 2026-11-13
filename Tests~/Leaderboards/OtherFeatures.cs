@@ -1,6 +1,8 @@
 // Minimal doubles for the bridge's unrelated features. Leaderboard sources are real.
 using System;
 
+namespace UnityEngine { public static class Debug { public static void LogException(Exception exception) { } } }
+
 namespace UniWebKit
 {
     public interface IAdvProvider { }

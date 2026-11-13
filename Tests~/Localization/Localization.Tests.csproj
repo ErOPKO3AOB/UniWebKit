@@ -7,6 +7,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../Runtime/Features/IUniWebFeature.cs" />
+    <Compile Include="../../Runtime/Features/UniWebError.cs" />
+    <Compile Include="../../Runtime/Features/Platform/*.cs" />
+    <Compile Include="../../Runtime/Features/Profile/*.cs" />
+    <Compile Include="../../Runtime/Features/Game/*.cs" />
+    <Compile Include="../../Runtime/Features/Pause/*.cs" />
     <Compile Include="../../Runtime/Features/Localization/*.cs" />
     <Compile Include="../../Runtime/Features/Leaderboards/*.cs" />
     <Compile Include="../../Runtime/Providers/GamePush/GamePushLocalizationProvider.cs" />

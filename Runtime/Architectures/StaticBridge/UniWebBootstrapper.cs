@@ -20,6 +20,10 @@ namespace UniWebKit
             ILocalizationProvider localization = new LocalLocalizationProvider();
             ILeaderboardProvider leaderboards = new UnsupportedLeaderboardProvider();
             IPlayerProvider player = new LocalPrefsPlayerProvider(settings.PlayerStorage);
+            IPlatformProvider platform = new UnsupportedPlatformProvider();
+            IProfileProvider profile = new UnsupportedProfileProvider();
+            IGameProvider game = new UnsupportedGameProvider();
+            IPauseProvider pause = new LocalPauseProvider();
 
             // 2. ПЕРЕЗАПИСЫВАЕМ (если платформа это умеет)
             switch (settings.CurrentPlatform)
@@ -45,14 +49,18 @@ namespace UniWebKit
                     break;
                 case UniWebSettings.TargetPlatform.VKGames:
 #if UNIWEB_VK_GAMES
+                    platform = new VKGamesPlatformProvider();
+                    profile = new VKGamesProfileProvider();
+                    pause = new VKGamesPauseProvider();
                     ads = new VKGamesAdvProvider();
+                    inApps = new VKGamesInAppProvider();
                     player = new VKGamesPlayerProvider(settings.PlayerStorage);
 #endif
                     break;
             }
 
             // 3. Отправляем в мост
-            UniWebBridge.Initialize(ads, inApps, envir, player, localization, leaderboards);
+            UniWebBridge.Initialize(ads, inApps, envir, player, localization, leaderboards, platform, profile, game, pause);
         }
     }
 }

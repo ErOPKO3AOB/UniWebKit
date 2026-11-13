@@ -12,18 +12,19 @@ function deferred() { let resolve, reject; const promise = new Promise((a, b) =>
 async function flush() { for (let i = 0; i < 20; i++) await Promise.resolve(); }
 
 function create(bridge, sharedWindow) {
-    const library = {}, timers = new Map(), scripts = [];
+    const library = {}, timers = new Map(), scripts = [], messages = [], listeners = {};
     let time = 0, timerId = 0;
     const context = {
         Promise, console, Date: { now: () => time },
         window: sharedWindow || (bridge ? { vkBridge: bridge } : {}),
         document: {
-            hidden: false, addEventListener() {},
+            hidden: false, addEventListener: (name, callback) => { listeners[name] = callback; },
             createElement: tag => ({ tag, style: {}, offsetHeight: 1, offsetLeft: -10000, offsetParent: {}, parentNode: { removeChild() {} } }),
             body: { appendChild() {} }, head: { appendChild: script => scripts.push(script) }
         },
         setTimeout: (fn, delay) => { const id = ++timerId; timers.set(id, { fn, delay }); return id; },
         clearTimeout: id => timers.delete(id),
+        SendMessage: (host, method, value) => messages.push({ host, method, value }),
         UTF8ToString: value => value,
         lengthBytesUTF8: text => text.length, stringToUTF8() {}, _malloc: () => 1, _free() {},
         LibraryManager: { library }, mergeInto: Object.assign,
@@ -38,7 +39,7 @@ function create(bridge, sharedWindow) {
     context.vkState = library.$vkState;
     context._UniWebVK_Init = library.UniWebVK_Init;
     return {
-        lib: library, context, scripts,
+        lib: library, context, scripts, messages, listeners,
         advance: milliseconds => { time += milliseconds; },
         expire: delay => { for (const [id, item] of [...timers]) if (item.delay === delay) { timers.delete(id); item.fn(); } }
     };
@@ -46,14 +47,18 @@ function create(bridge, sharedWindow) {
 
 function sdk() {
     const init = deferred(), show = deferred(), calls = [];
-    const state = { available: true, supported: true, show, calls, init, throwShow: false };
+    const state = { available: true, supported: true, show, calls, init, throwShow: false,
+        order: deferred(), listeners: [], profile: { id: 42, first_name: 'First', last_name: 'Player', photo_200: 'avatar' } };
+    state.notify = event => state.listeners.forEach(callback => callback(event));
     state.bridge = {
         supports: () => state.supported,
-        subscribe() {},
+        subscribe(callback) { state.listeners.push(callback); },
         send(method, options) {
             calls.push([method, options]);
             if (method === 'VKWebAppInit') return init.promise;
             if (method === 'VKWebAppCheckNativeAds') return Promise.resolve({ result: state.available });
+            if (method === 'VKWebAppGetUserInfo') return Promise.resolve(state.profile);
+            if (method === 'VKWebAppShowOrderBox') return state.order.promise;
             if (method === 'VKWebAppShowNativeAds') {
                 if (state.throwShow) throw new Error('sync failure');
                 return state.show.promise;
@@ -160,5 +165,61 @@ function sdk() {
     check(dependencies.includes('$vkState') && dependencies.includes('$UTF8ToString'), true, 'native ad linker dependencies');
     check([...lib.UniWebVK_InitWithCallback__deps].includes('UniWebVK_Init'), true, 'cross-library call dependency');
     check([...lib.$vkState__deps].includes('malloc') && [...lib.$vkState__deps].includes('free'), true, 'string memory dependencies');
+    const host = 'runtime';
+    lib.UniWebVK_RegisterRuntime(host);
+    await flush();
+    check(env.messages.filter(x => x.method === 'OnVKPause').pop().value, '0', 'initial pause snapshot');
+    env.context.document.hidden = true;
+    env.listeners.visibilitychange();
+    check(lib.UniWebVK_IsPaused(), 1, 'hidden document pauses');
+    vk.notify({ detail: { type: 'VKWebAppViewHide' } });
+    env.context.document.hidden = false;
+    env.listeners.visibilitychange();
+    check(lib.UniWebVK_IsPaused(), 1, 'visibility cannot clear native view pause');
+    vk.notify({ detail: { type: 'VKWebAppViewRestore' } });
+    check(lib.UniWebVK_IsPaused(), 0, 'all visibility reasons cleared');
+    check(env.messages.some(x => x.method === 'OnVKProfileInvalidated'), true, 'resume requests profile comparison');
+
+    lib.UniWebVK_Request(host, 'profile1', 'profile', '');
+    await flush();
+    const reply = id => JSON.parse(env.messages.filter(x => x.method === 'OnVKReply').map(x => x.value).find(x => JSON.parse(x).requestId === id));
+    check(reply('profile1').id, '42', 'profile ID is opaque string');
+    check(reply('profile1').name, 'First Player', 'profile name mapping');
+    vk.profile = { id: 75, first_name: 'Other' };
+    lib.UniWebVK_Request(host, 'profile2', 'profile', '');
+    await flush();
+    check(reply('profile2').id, '75', 'refresh sees another account');
+
+    lib.UniWebVK_Request(host, 'order1', 'purchase', 'coins');
+    lib.UniWebVK_Request(host, 'order2', 'purchase', 'coins');
+    await flush();
+    check(reply('order2').errorCode, 2, 'orders are serialized');
+    check(lib.UniWebVK_IsPaused(), 1, 'order box pauses');
+    check(lib.UniWebVK_IsAdReady('reward'), 0, 'order blocks advertisement');
+    vk.order.resolve({ status: 'chargeable', order_id: 'receipt1' });
+    await flush();
+    check(reply('order1').status, 'chargeable', 'order status preserved without paid claim');
+    check(reply('order1').orderId, 'receipt1', 'real order ID preserved');
+    check(lib.UniWebVK_IsPaused(), 0, 'order releases pause');
+    vk.order = deferred();
+    lib.UniWebVK_Request(host, 'cancel', 'purchase', 'coins');
+    await flush();
+    vk.order.resolve({ status: 'cancel' });
+    await flush();
+    check(reply('cancel').success, false, 'cancel is not successful order');
+    check(reply('cancel').status, 'cancel', 'explicit cancellation preserved');
+    vk.order = deferred();
+    lib.UniWebVK_Request(host, 'missing-id', 'purchase', 'coins');
+    await flush();
+    vk.order.resolve({ status: 'chargeable' });
+    await flush();
+    check(reply('missing-id').success, false, 'product ID never substitutes a receipt');
+    lib.UniWebVK_Request(host, 'catalog', 'catalog', '');
+    await flush();
+    check(reply('catalog').errorCode, 0, 'unsupported catalog is explicit');
+    const messageCount = env.messages.length;
+    lib.UniWebVK_UnregisterRuntime(host);
+    vk.notify({ detail: { type: 'VKWebAppViewHide' } });
+    check(env.messages.length, messageCount, 'unregistered receivers are detached');
     console.log(`PASS: ${checks} VK JavaScript bridge checks`);
 })().catch(error => { console.error(error); process.exitCode = 1; });

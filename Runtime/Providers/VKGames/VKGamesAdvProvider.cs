@@ -17,10 +17,12 @@ namespace UniWebKit
             internal Action Opened, Reward;
             internal Action<bool> Closed;
             internal Action<string> Error;
-            internal bool Muted, PreviousAudioPause;
+            internal bool Muted, PreviousAudioPause, OpenedNotified;
         }
 
         private static PendingAd _pending;
+        // A resolved VK pause provider hands time/audio policy to the game's pause controller.
+        internal static int PauseManagers;
         private bool _disposed;
 
         // Keep reverse-P/Invoke delegates alive for the complete lifetime of the WebGL module.
@@ -120,10 +122,14 @@ namespace UniWebKit
         private static void OnAdOpened()
         {
             var pending = _pending;
-            if (pending == null || pending.Owner == null || pending.Muted) return;
-            pending.PreviousAudioPause = AudioListener.pause;
-            pending.Muted = true;
-            AudioListener.pause = true;
+            if (pending == null || pending.Owner == null || pending.OpenedNotified) return;
+            pending.OpenedNotified = true;
+            if (PauseManagers == 0)
+            {
+                pending.PreviousAudioPause = AudioListener.pause;
+                pending.Muted = true;
+                AudioListener.pause = true;
+            }
             Invoke(pending.Opened);
         }
 
@@ -152,7 +158,7 @@ namespace UniWebKit
         {
             if (!pending.Muted) return;
             pending.Muted = false;
-            AudioListener.pause = pending.PreviousAudioPause;
+            if (PauseManagers == 0) AudioListener.pause = pending.PreviousAudioPause;
         }
 
         private static void Invoke(Action action)

@@ -42,14 +42,16 @@ namespace UniWebKit
         {
             if (!CheckReady(onError)) return;
             RefreshSnapshots();
-            onSuccess?.Invoke(Products);
+            try { onSuccess?.Invoke(Products); }
+            finally { NotifyChanges(); }
         }
 
         public override void FetchPurchases(Action<IReadOnlyList<InAppPurchase>> onSuccess = null, Action<InAppError> onError = null)
         {
             if (!CheckReady(onError)) return;
             RefreshSnapshots();
-            onSuccess?.Invoke(Purchases);
+            try { onSuccess?.Invoke(Purchases); }
+            finally { NotifyChanges(); }
         }
 
         public override void Purchase(string productId, Action<InAppPurchase> onSuccess = null, Action<InAppError> onError = null)
@@ -97,7 +99,8 @@ namespace UniWebKit
             {
                 EditorConsumedIds.Add(productId);
                 RefreshSnapshots();
-                onSuccess?.Invoke(new InAppPurchase(productId, platformProductId: productId));
+                try { onSuccess?.Invoke(new InAppPurchase(productId, platformProductId: productId)); }
+                finally { NotifyChanges(); }
                 return;
             }
 #endif
@@ -111,7 +114,8 @@ namespace UniWebKit
                 // YG2's success notification also initiates consumption; it carries no receipt token.
                 RefreshSnapshots();
                 Cleanup();
-                onSuccess?.Invoke(new InAppPurchase(id, platformProductId: id));
+                try { onSuccess?.Invoke(new InAppPurchase(id, platformProductId: id)); }
+                finally { NotifyChanges(); }
             }
 
             void OnError(string id)

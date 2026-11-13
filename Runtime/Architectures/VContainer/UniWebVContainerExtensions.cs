@@ -15,6 +15,10 @@ namespace UniWebKit
             builder.Register<UnityEnvirProvider>(Lifetime.Singleton).As<IEnvirProvider>();
             builder.Register<LocalLocalizationProvider>(Lifetime.Singleton).As<ILocalizationProvider>();
             builder.Register<UnsupportedLeaderboardProvider>(Lifetime.Singleton).As<ILeaderboardProvider>();
+            builder.Register<UnsupportedPlatformProvider>(Lifetime.Singleton).As<IPlatformProvider>();
+            builder.Register<UnsupportedProfileProvider>(Lifetime.Singleton).As<IProfileProvider>();
+            builder.Register<UnsupportedGameProvider>(Lifetime.Singleton).As<IGameProvider>();
+            builder.Register<LocalPauseProvider>(Lifetime.Singleton).As<IPauseProvider>();
             builder.Register<IPlayerProvider>(_ => new LocalPrefsPlayerProvider(settings?.PlayerStorage), Lifetime.Singleton);
             if (settings == null) return;
 
@@ -40,6 +44,10 @@ namespace UniWebKit
                     break;
                 case UniWebSettings.TargetPlatform.VKGames:
 #if UNIWEB_VK_GAMES
+                    builder.Register<VKGamesPlatformProvider>(Lifetime.Singleton).As<IPlatformProvider>();
+                    builder.Register<VKGamesProfileProvider>(Lifetime.Singleton).As<IProfileProvider>();
+                    builder.Register<VKGamesPauseProvider>(Lifetime.Singleton).As<IPauseProvider>();
+                    builder.Register<VKGamesInAppProvider>(Lifetime.Singleton).As<IInAppProvider>();
                     builder.Register<VKGamesAdvProvider>(Lifetime.Singleton).As<IAdvProvider>();
                     builder.Register<IPlayerProvider>(_ => new VKGamesPlayerProvider(settings.PlayerStorage), Lifetime.Singleton);
 #endif

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net11.0</TargetFramework>
+    <DefineConstants>UNIWEB_VK_GAMES;UNIWEB_PLUGIN_YG2;Payments_yg;UNITY_EDITOR;UNIWEB_ARCHITECTURE_STATIC</DefineConstants>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <NoWarn>CS0649</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Runtime/Features/IUniWebFeature.cs" />
+    <Compile Include="../../Runtime/Features/UniWebError.cs" />
+    <Compile Include="../../Runtime/Features/Platform/*.cs" />
+    <Compile Include="../../Runtime/Features/Profile/*.cs" />
+    <Compile Include="../../Runtime/Features/Game/*.cs" />
+    <Compile Include="../../Runtime/Features/Pause/*.cs" />
+    <Compile Include="../../Runtime/Features/InAppPurchases/*.cs" />
+    <Compile Include="../../Runtime/Features/Advertisement/*.cs" />
+    <Compile Include="../../Runtime/Providers/VKGames/VKGamesRuntime.cs" />
+    <Compile Include="../../Runtime/Providers/VKGames/VKGamesPlatformProvider.cs" />
+    <Compile Include="../../Runtime/Providers/VKGames/VKGamesProfileProvider.cs" />
+    <Compile Include="../../Runtime/Providers/VKGames/VKGamesPauseProvider.cs" />
+    <Compile Include="../../Runtime/Providers/VKGames/VKGamesInAppProvider.cs" />
+    <Compile Include="../../Runtime/Providers/VKGames/VKGamesAdvProvider.cs" />
+    <Compile Include="../../Runtime/Providers/PluginYG2/PluginYG2InAppProvider.cs" />
+    <Compile Include="../../Runtime/Architectures/StaticBridge/UniWebBridge.cs" />
+    <Compile Include="*.cs" />
+  </ItemGroup>
+</Project>
