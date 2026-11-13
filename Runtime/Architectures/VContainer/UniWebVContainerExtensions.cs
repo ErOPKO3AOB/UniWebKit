@@ -13,6 +13,7 @@ namespace UniWebKit
             builder.Register<UnsupportedAdvProvider>(Lifetime.Singleton).As<IAdvProvider>();
             builder.Register<UnsupportedInAppProvider>(Lifetime.Singleton).As<IInAppProvider>();
             builder.Register<UnityEnvirProvider>(Lifetime.Singleton).As<IEnvirProvider>();
+            builder.Register<LocalLocalizationProvider>(Lifetime.Singleton).As<ILocalizationProvider>();
             builder.Register<IPlayerProvider>(_ => new LocalPrefsPlayerProvider(settings?.PlayerStorage), Lifetime.Singleton);
             if (settings == null) return;
 
@@ -23,6 +24,7 @@ namespace UniWebKit
                     builder.Register<PluginYG2AdvProvider>(Lifetime.Singleton).As<IAdvProvider>();
                     builder.Register<PluginYG2InAppProvider>(Lifetime.Singleton).As<IInAppProvider>();
                     builder.Register<PluginYG2EnvirProvider>(Lifetime.Singleton).As<IEnvirProvider>();
+                    builder.Register<PluginYG2LocalizationProvider>(Lifetime.Singleton).As<ILocalizationProvider>();
                     builder.Register<IPlayerProvider>(_ => new PluginYG2PlayerProvider(settings.PlayerStorage), Lifetime.Singleton);
 #endif
                     break;
@@ -31,6 +33,7 @@ namespace UniWebKit
                     builder.Register<GamePushAdvProvider>(Lifetime.Singleton).As<IAdvProvider>();
                     builder.Register<GamePushInAppProvider>(Lifetime.Singleton).As<IInAppProvider>();
                     builder.Register<GamePushEnvirProvider>(Lifetime.Singleton).As<IEnvirProvider>();
+                    builder.Register<GamePushLocalizationProvider>(Lifetime.Singleton).As<ILocalizationProvider>();
                     builder.Register<IPlayerProvider>(_ => new GamePushPlayerProvider(settings.PlayerStorage), Lifetime.Singleton);
 #endif
                     break;

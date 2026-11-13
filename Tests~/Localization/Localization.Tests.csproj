@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net11.0</TargetFramework>
+    <DefineConstants>UNIWEB_GAMEPUSH;UNIWEB_PLUGIN_YG2;UNIWEB_ARCHITECTURE_STATIC;$(LocalizationDefines)</DefineConstants>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Runtime/Features/IUniWebFeature.cs" />
+    <Compile Include="../../Runtime/Features/Localization/*.cs" />
+    <Compile Include="../../Runtime/Providers/GamePush/GamePushLocalizationProvider.cs" />
+    <Compile Include="../../Runtime/Providers/PluginYG2/PluginYG2LocalizationProvider.cs" />
+    <Compile Include="../../Runtime/Architectures/StaticBridge/UniWebBridge.cs" />
+    <Compile Include="*.cs" />
+  </ItemGroup>
+</Project>

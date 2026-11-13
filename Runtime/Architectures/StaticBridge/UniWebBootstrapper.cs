@@ -17,6 +17,7 @@ namespace UniWebKit
             IAdvProvider ads = new UnsupportedAdvProvider();
             IInAppProvider inApps = new UnsupportedInAppProvider();
             IEnvirProvider envir = new UnityEnvirProvider();
+            ILocalizationProvider localization = new LocalLocalizationProvider();
             //ILeaderboardProvider leaderboards = new UnsupportedLeaderboardProvider();
             IPlayerProvider player = new LocalPrefsPlayerProvider(settings.PlayerStorage);
 
@@ -28,6 +29,7 @@ namespace UniWebKit
                     ads = new PluginYG2AdvProvider();
                     inApps = new PluginYG2InAppProvider();
                     envir = new PluginYG2EnvirProvider();
+                    localization = new PluginYG2LocalizationProvider();
                     player = new PluginYG2PlayerProvider(settings.PlayerStorage);
                     // leaderboards = new PluginYG2LeaderboardProvider();
 #endif
@@ -39,6 +41,7 @@ namespace UniWebKit
                     ads = new GamePushAdvProvider();
                     inApps = new GamePushInAppProvider();
                     envir = new GamePushEnvirProvider();
+                    localization = new GamePushLocalizationProvider();
                     player = new GamePushPlayerProvider(settings.PlayerStorage);
 #endif
                     break;
@@ -50,7 +53,7 @@ namespace UniWebKit
             }
 
             // 3. Отправляем в мост
-            UniWebBridge.Initialize(ads, inApps, envir, player);
+            UniWebBridge.Initialize(ads, inApps, envir, player, localization);
         }
     }
 }
