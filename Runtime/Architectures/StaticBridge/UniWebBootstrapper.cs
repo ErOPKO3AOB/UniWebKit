@@ -18,7 +18,7 @@ namespace UniWebKit
             IInAppProvider inApps = new UnsupportedInAppProvider();
             IEnvirProvider envir = new UnityEnvirProvider();
             ILocalizationProvider localization = new LocalLocalizationProvider();
-            //ILeaderboardProvider leaderboards = new UnsupportedLeaderboardProvider();
+            ILeaderboardProvider leaderboards = new UnsupportedLeaderboardProvider();
             IPlayerProvider player = new LocalPrefsPlayerProvider(settings.PlayerStorage);
 
             // 2. ПЕРЕЗАПИСЫВАЕМ (если платформа это умеет)
@@ -31,13 +31,11 @@ namespace UniWebKit
                     envir = new PluginYG2EnvirProvider();
                     localization = new PluginYG2LocalizationProvider();
                     player = new PluginYG2PlayerProvider(settings.PlayerStorage);
-                    // leaderboards = new PluginYG2LeaderboardProvider();
 #endif
                     break;
 
                 case UniWebSettings.TargetPlatform.GamePush:
 #if UNIWEB_GAMEPUSH
-                    // Лидерборды останутся пустышкой!
                     ads = new GamePushAdvProvider();
                     inApps = new GamePushInAppProvider();
                     envir = new GamePushEnvirProvider();
@@ -53,7 +51,7 @@ namespace UniWebKit
             }
 
             // 3. Отправляем в мост
-            UniWebBridge.Initialize(ads, inApps, envir, player, localization);
+            UniWebBridge.Initialize(ads, inApps, envir, player, localization, leaderboards);
         }
     }
 }

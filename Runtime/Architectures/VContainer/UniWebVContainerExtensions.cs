@@ -14,6 +14,7 @@ namespace UniWebKit
             builder.Register<UnsupportedInAppProvider>(Lifetime.Singleton).As<IInAppProvider>();
             builder.Register<UnityEnvirProvider>(Lifetime.Singleton).As<IEnvirProvider>();
             builder.Register<LocalLocalizationProvider>(Lifetime.Singleton).As<ILocalizationProvider>();
+            builder.Register<UnsupportedLeaderboardProvider>(Lifetime.Singleton).As<ILeaderboardProvider>();
             builder.Register<IPlayerProvider>(_ => new LocalPrefsPlayerProvider(settings?.PlayerStorage), Lifetime.Singleton);
             if (settings == null) return;
 
