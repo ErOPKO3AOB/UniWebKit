@@ -11,12 +11,14 @@ namespace UniWebKit
             if (!ReferenceEquals(Player, player)) Player?.Dispose();
             if (!ReferenceEquals(Localization, localization)) Localization?.Dispose();
             if (!ReferenceEquals(Leaderboards, leaderboards)) Leaderboards?.Dispose();
-            Ads = ads != null ? ads : new UnsupportedAdvProvider();
+            
+            Ads = ads ?? new UnsupportedAdvProvider();
             InApps = inApps ?? new UnsupportedInAppProvider();
             Envir = envir ?? new UnityEnvirProvider();
             Player = player ?? new LocalPrefsPlayerProvider();
             Localization = localization ?? new LocalLocalizationProvider();
             Leaderboards = leaderboards ?? new UnsupportedLeaderboardProvider();
+            
             IsInitialized = true;
         }
         public static bool IsInitialized { get; private set; }

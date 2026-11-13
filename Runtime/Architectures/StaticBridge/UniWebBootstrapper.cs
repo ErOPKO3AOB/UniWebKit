@@ -45,6 +45,7 @@ namespace UniWebKit
                     break;
                 case UniWebSettings.TargetPlatform.VKGames:
 #if UNIWEB_VK_GAMES
+                    ads = new VKGamesAdvProvider();
                     player = new VKGamesPlayerProvider(settings.PlayerStorage);
 #endif
                     break;

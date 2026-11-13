@@ -40,6 +40,7 @@ namespace UniWebKit
                     break;
                 case UniWebSettings.TargetPlatform.VKGames:
 #if UNIWEB_VK_GAMES
+                    builder.Register<IAdvProvider, VKGamesAdvProvider>(Lifetime.Singleton);
                     builder.Register<IPlayerProvider>(_ => new VKGamesPlayerProvider(settings.PlayerStorage), Lifetime.Singleton);
 #endif
                     break;
