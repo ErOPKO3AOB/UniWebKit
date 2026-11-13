@@ -1,12 +1,58 @@
-const UniWebVKBridge = {
+var UniWebVKBridge = {
+    $vkState__deps: ['$lengthBytesUTF8', '$stringToUTF8', 'malloc', 'free'],
     $vkState: {
         initialized: false,
         initCompleted: false,
+        bridge: null,
+        initPromise: null,
+        adBusy: false,
+        baitStarted: false,
+        ads: {
+            interstitial: { ready: false, checking: false, nextCheck: 0 },
+            reward: { ready: false, checking: false, nextCheck: 0 }
+        },
         adBlockDetected: false,
         isPaused: false,
         listenersAttached: false,
         initCallbacks: [],
         pauseCallbackPtr: 0,
+
+        withTimeout: function(promise, delay) {
+            return new Promise(function(resolve, reject) {
+                var timer = setTimeout(function() { reject(new Error('VK Bridge request timed out.')); }, delay);
+                Promise.resolve(promise).then(function(value) {
+                    clearTimeout(timer);
+                    resolve(value);
+                }, function(error) {
+                    clearTimeout(timer);
+                    reject(error);
+                });
+            });
+        },
+
+        supports: function(method) {
+            return this.initCompleted && this.bridge && typeof this.bridge.send === 'function' &&
+                (typeof this.bridge.supports !== 'function' || this.bridge.supports(method));
+        },
+
+        checkAd: function(format) {
+            var state = this.ads[format];
+            if (!state || this.adBusy || !this.supports('VKWebAppCheckNativeAds') ||
+                state.checking || Date.now() < state.nextCheck) return;
+            state.checking = true;
+            state.nextCheck = Date.now() + 5000;
+            var self = this;
+            var request = Promise.resolve().then(function() {
+                return self.bridge.send('VKWebAppCheckNativeAds', { ad_format: format });
+            });
+            this.withTimeout(request, 10000).then(function(data) {
+                state.checking = false;
+                state.ready = !self.adBusy && !!data && data.result === true;
+            }, function() {
+                state.checking = false;
+                state.ready = false;
+            });
+        },
 
         // Выделение памяти в куче WASM для передачи строк в C# (string в MonoPInvokeCallback)
         allocString: function(str) {
@@ -62,38 +108,53 @@ const UniWebVKBridge = {
 
         ensureBridge: function(callback) {
             var self = this;
-            if (typeof window.vkBridge !== 'undefined') {
-                if (!this.initialized) {
-                    this.initialized = true;
-                    this.attachLifecycleListeners(window.vkBridge);
-                    window.vkBridge.send('VKWebAppInit')
-                        .then(function() { self.notifyInitCompleted(true); })
-                        .catch(function() { self.notifyInitCompleted(true); }); // В дев-окружении вне iframe ВК резолвим штатно
+            if (typeof window === 'undefined') { callback(null); return; }
+            if (this.initCompleted) { callback(this.bridge); return; }
+            if (!this.initPromise) {
+                // Shared by all requests and Unity instances on the page. The template only loads the SDK.
+                if (!window.__uniWebVKInitPromise) {
+                    var loaded = new Promise(function(resolve, reject) {
+                        function getBridge() {
+                            var bridge = window.vkBridge;
+                            return bridge && bridge.default ? bridge.default : bridge;
+                        }
+                        if (getBridge()) { resolve(getBridge()); return; }
+                        if (typeof document === 'undefined') { reject(new Error('No document.')); return; }
+                        var script = document.createElement('script');
+                        script.src = 'https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js';
+                        script.onload = function() {
+                            var bridge = getBridge();
+                            if (bridge) resolve(bridge);
+                            else reject(new Error('VK Bridge was not exported.'));
+                        };
+                        script.onerror = function() { reject(new Error('VK Bridge failed to load.')); };
+                        document.head.appendChild(script);
+                    });
+                    var initialization = this.withTimeout(loaded, 15000).then(function(bridge) {
+                        return self.withTimeout(bridge.send('VKWebAppInit'), 15000).then(function(data) {
+                            if (!data || data.result !== true) throw new Error('VKWebAppInit was not confirmed.');
+                            return bridge;
+                        });
+                    });
+                    window.__uniWebVKInitPromise = initialization;
+                    initialization.catch(function() {
+                        if (window.__uniWebVKInitPromise === initialization) window.__uniWebVKInitPromise = null;
+                    });
                 }
-                callback(window.vkBridge);
-                return;
-            }
-
-            var script = document.createElement('script');
-            script.src = 'https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js';
-            script.onload = function() {
-                if (typeof window.vkBridge !== 'undefined') {
+                this.initPromise = window.__uniWebVKInitPromise.then(function(bridge) {
+                    self.bridge = bridge;
                     self.initialized = true;
-                    self.attachLifecycleListeners(window.vkBridge);
-                    window.vkBridge.send('VKWebAppInit')
-                        .then(function() { self.notifyInitCompleted(true); })
-                        .catch(function() { self.notifyInitCompleted(true); });
-                    callback(window.vkBridge);
-                } else {
+                    self.attachLifecycleListeners(bridge);
+                    self.notifyInitCompleted(true);
+                    return bridge;
+                }, function(error) {
+                    self.initialized = false;
+                    self.initPromise = null;
                     self.notifyInitCompleted(false);
-                    callback(null);
-                }
-            };
-            script.onerror = function() {
-                self.notifyInitCompleted(false);
-                callback(null);
-            };
-            document.head.appendChild(script);
+                    throw error;
+                });
+            }
+            this.initPromise.then(callback, function() { callback(null); });
         }
     },
 
@@ -104,12 +165,13 @@ const UniWebVKBridge = {
     UniWebVK_Init: function() {
         vkState.ensureBridge(function(bridge) {
             if (!bridge) return;
-            // Предзагрузка Interstitial и Rewarded
-            bridge.send('VKWebAppCheckNativeAds', { ad_format: 'interstitial' }).catch(function() {});
-            bridge.send('VKWebAppCheckNativeAds', { ad_format: 'reward' }).catch(function() {});
+            vkState.checkAd('interstitial');
+            vkState.checkAd('reward');
         });
 
-        // Проверка AdBlock через фейковый рекламный контейнер
+        if (vkState.baitStarted || typeof document === 'undefined') return;
+        vkState.baitStarted = true;
+        // Best-effort heuristic, not a guarantee that the platform has ad inventory.
         try {
             var bait = document.createElement('div');
             bait.className = 'pub_300x250 pub_300x250m pub_728x90 text-ad textAd text_ad text_ads text-ads text-ad-links ad-banner adsbox';
@@ -117,16 +179,17 @@ const UniWebVKBridge = {
             document.body.appendChild(bait);
             setTimeout(function() {
                 vkState.adBlockDetected = (bait.offsetParent === null || bait.offsetHeight === 0 || bait.offsetLeft === 0);
-                document.body.removeChild(bait);
+                if (bait.parentNode) bait.parentNode.removeChild(bait);
             }, 150);
         } catch (e) {
             vkState.adBlockDetected = false;
         }
     },
 
+    UniWebVK_InitWithCallback__deps: ['UniWebVK_Init'],
     UniWebVK_InitWithCallback: function(onInitializedPtr) {
         if (vkState.initCompleted) {
-            {{{ makeDynCall('vi', 'onInitializedPtr') }}}(1);
+            if (onInitializedPtr) {{{ makeDynCall('vi', 'onInitializedPtr') }}}(1);
             return;
         }
         if (onInitializedPtr) {
@@ -136,7 +199,16 @@ const UniWebVKBridge = {
     },
 
     UniWebVK_IsSupported: function() {
-        return typeof window !== 'undefined' ? 1 : 0;
+        return vkState.supports('VKWebAppShowNativeAds') || vkState.supports('VKWebAppShowBannerAd') ? 1 : 0;
+    },
+
+    UniWebVK_IsAdReady__deps: ['$UTF8ToString'],
+    UniWebVK_IsAdReady: function(formatPtr) {
+        var format = UTF8ToString(formatPtr);
+        var state = vkState.ads[format];
+        if (!state || vkState.adBusy || !vkState.supports('VKWebAppShowNativeAds')) return 0;
+        vkState.checkAd(format);
+        return state.ready ? 1 : 0;
     },
 
     UniWebVK_IsInitialized: function() {
@@ -203,6 +275,7 @@ const UniWebVKBridge = {
     // 4. IN-APP PROVIDER (VKWebAppShowOrderBox)
     // =========================================================================
 
+    UniWebVK_PurchaseItem__deps: ['$UTF8ToString'],
     UniWebVK_PurchaseItem: function(itemIdPtr, onSuccessPtr, onErrorPtr) {
         var itemId = UTF8ToString(itemIdPtr);
 
@@ -254,52 +327,60 @@ const UniWebVKBridge = {
         return vkState.adBlockDetected ? 1 : 0;
     },
 
+    UniWebVK_ShowNativeAds__deps: ['$UTF8ToString'],
     UniWebVK_ShowNativeAds: function(formatPtr, onOpenedPtr, onResultPtr, onErrorPtr) {
         var adFormat = UTF8ToString(formatPtr);
-
-        vkState.ensureBridge(function(bridge) {
-            if (!bridge) {
-                {{{ makeDynCall('vi', 'onErrorPtr') }}}(0); // 0 = Bridge not found
-                return;
+        var state = vkState.ads[adFormat];
+        if (!vkState.initCompleted) {
+            if (onErrorPtr) {{{ makeDynCall('vi', 'onErrorPtr') }}}(0);
+            return;
+        }
+        if (!state || !state.ready || vkState.adBusy || !vkState.supports('VKWebAppShowNativeAds')) {
+            if (onErrorPtr) {{{ makeDynCall('vi', 'onErrorPtr') }}}(1);
+            return;
+        }
+        vkState.adBusy = true;
+        state.ready = false;
+        var completed = false;
+        function finish(data, error) {
+            if (completed) return;
+            completed = true;
+            vkState.adBusy = false;
+            state.nextCheck = 0;
+            vkState.checkAd(adFormat);
+            if (error) {
+                var code = error.error_data && error.error_data.error_code === 4 ? 1 : 2;
+                if (onErrorPtr) {{{ makeDynCall('vi', 'onErrorPtr') }}}(code);
+            } else if (onResultPtr) {
+                {{{ makeDynCall('vi', 'onResultPtr') }}}(data && data.result === true ? 1 : 0);
             }
-
-            {{{ makeDynCall('v', 'onOpenedPtr') }}}();
-
-            bridge.send('VKWebAppShowNativeAds', { ad_format: adFormat })
-                .then(function(data) {
-                    if (data && data.result === true) {
-                        {{{ makeDynCall('vi', 'onResultPtr') }}}(1);
-                    } else {
-                        {{{ makeDynCall('vi', 'onResultPtr') }}}(0);
-                    }
-                    // Фоновый прогрев следующего рекламного блока
-                    bridge.send('VKWebAppCheckNativeAds', { ad_format: adFormat }).catch(function() {});
-                })
-                .catch(function(error) {
-                    // Коды: 1 = No ads / rejected, 2 = Network / API error
-                    var code = (error && error.error_data && error.error_data.error_code === 4) ? 1 : 2;
-                    {{{ makeDynCall('vi', 'onErrorPtr') }}}(code);
-                });
-        });
+        }
+        // No separate "opened" notification is supplied by this API: pause just before dispatch.
+        if (onOpenedPtr) {{{ makeDynCall('v', 'onOpenedPtr') }}}();
+        var request;
+        try { request = vkState.bridge.send('VKWebAppShowNativeAds', { ad_format: adFormat }); }
+        catch (error) { finish(null, error); return; }
+        // Deliberately no ad timeout: an unknown result must not unlock another overlapping show.
+        Promise.resolve(request).then(function(data) { finish(data, null); }, function(error) { finish(null, error); });
     },
 
+    UniWebVK_ShowBannerAd__deps: ['$UTF8ToString'],
     UniWebVK_ShowBannerAd: function(locationPtr, layoutTypePtr) {
         var location = UTF8ToString(locationPtr);
         var layoutType = UTF8ToString(layoutTypePtr);
 
         vkState.ensureBridge(function(bridge) {
-            if (!bridge) return;
-            bridge.send('VKWebAppShowBannerAd', {
-                banner_location: location,
-                layout_type: layoutType
+            if (!bridge || !vkState.supports('VKWebAppShowBannerAd')) return;
+            Promise.resolve().then(function() {
+                return bridge.send('VKWebAppShowBannerAd', { banner_location: location, layout_type: layoutType });
             }).catch(function() {});
         });
     },
 
     UniWebVK_HideBannerAd: function() {
         vkState.ensureBridge(function(bridge) {
-            if (!bridge) return;
-            bridge.send('VKWebAppHideBannerAd').catch(function() {});
+            if (!bridge || !vkState.supports('VKWebAppHideBannerAd')) return;
+            Promise.resolve().then(function() { return bridge.send('VKWebAppHideBannerAd'); }).catch(function() {});
         });
     }
 };

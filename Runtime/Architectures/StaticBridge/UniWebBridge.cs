@@ -7,6 +7,7 @@ namespace UniWebKit
         // For INIT
         public static void Initialize(IAdvProvider ads = null, IInAppProvider inApps = null, IEnvirProvider envir = null, IPlayerProvider player = null, ILocalizationProvider localization = null, ILeaderboardProvider leaderboards = null)
         {
+            if (!ReferenceEquals(Ads, ads)) (Ads as System.IDisposable)?.Dispose();
             if (!ReferenceEquals(InApps, inApps)) InApps?.Dispose();
             if (!ReferenceEquals(Player, player)) Player?.Dispose();
             if (!ReferenceEquals(Localization, localization)) Localization?.Dispose();
