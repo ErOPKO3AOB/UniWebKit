@@ -2,6 +2,7 @@ const assert = require('assert').strict;
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { URLSearchParams } = require('url');
 
 const source = fs.readFileSync(path.join(__dirname, '../../Runtime/Providers/VKGames/Plugins/WebGL/UniWebVKBridge.jslib'), 'utf8');
 // Replace only the Emscripten callback macros; the actual library body runs unchanged.
@@ -12,10 +13,11 @@ function deferred() { let resolve, reject; const promise = new Promise((a, b) =>
 async function flush() { for (let i = 0; i < 20; i++) await Promise.resolve(); }
 
 function create(bridge, sharedWindow) {
-    const library = {}, timers = new Map(), scripts = [], messages = [], listeners = {};
+    const library = {}, timers = new Map(), scripts = [], messages = [], listeners = {}, strings = new Map();
+    let pointer = 0;
     let time = 0, timerId = 0;
     const context = {
-        Promise, console, Date: { now: () => time },
+        Promise, console, URLSearchParams, Date: { now: () => time },
         window: sharedWindow || (bridge ? { vkBridge: bridge } : {}),
         document: {
             hidden: false, addEventListener: (name, callback) => { listeners[name] = callback; },
@@ -26,7 +28,8 @@ function create(bridge, sharedWindow) {
         clearTimeout: id => timers.delete(id),
         SendMessage: (host, method, value) => messages.push({ host, method, value }),
         UTF8ToString: value => value,
-        lengthBytesUTF8: text => text.length, stringToUTF8() {}, _malloc: () => 1, _free() {},
+        lengthBytesUTF8: text => text.length, stringToUTF8: (text, ptr) => strings.set(ptr, text),
+        _malloc: () => ++pointer, _free: ptr => strings.delete(ptr),
         LibraryManager: { library }, mergeInto: Object.assign,
         autoAddDeps: (lib, dependency) => {
             for (const name of Object.keys(lib))
@@ -39,7 +42,7 @@ function create(bridge, sharedWindow) {
     context.vkState = library.$vkState;
     context._UniWebVK_Init = library.UniWebVK_Init;
     return {
-        lib: library, context, scripts, messages, listeners,
+        lib: library, context, scripts, messages, listeners, strings,
         advance: milliseconds => { time += milliseconds; },
         expire: delay => { for (const [id, item] of [...timers]) if (item.delay === delay) { timers.delete(id); item.fn(); } }
     };
@@ -48,7 +51,7 @@ function create(bridge, sharedWindow) {
 function sdk() {
     const init = deferred(), show = deferred(), calls = [];
     const state = { available: true, supported: true, show, calls, init, throwShow: false,
-        order: deferred(), listeners: [], profile: { id: 42, first_name: 'First', last_name: 'Player', photo_200: 'avatar' } };
+        order: deferred(), listeners: [], launchParams: {}, profile: { id: 42, first_name: 'First', last_name: 'Player', photo_200: 'avatar' } };
     state.notify = event => state.listeners.forEach(callback => callback(event));
     state.bridge = {
         supports: () => state.supported,
@@ -58,6 +61,7 @@ function sdk() {
             if (method === 'VKWebAppInit') return init.promise;
             if (method === 'VKWebAppCheckNativeAds') return Promise.resolve({ result: state.available });
             if (method === 'VKWebAppGetUserInfo') return Promise.resolve(state.profile);
+            if (method === 'VKWebAppGetLaunchParams') return Promise.resolve(state.launchParams);
             if (method === 'VKWebAppShowOrderBox') return state.order.promise;
             if (method === 'VKWebAppShowNativeAds') {
                 if (state.throwShow) throw new Error('sync failure');
@@ -221,5 +225,52 @@ function sdk() {
     lib.UniWebVK_UnregisterRuntime(host);
     vk.notify({ detail: { type: 'VKWebAppViewHide' } });
     check(env.messages.length, messageCount, 'unregistered receivers are detached');
+    const platforms = {
+        desktop_web: 1, desktop_web_messenger: 1, desktop_app_messenger: 1,
+        mobile_web: 2, mobile_android: 2, mobile_android_messenger: 2,
+        mobile_iphone: 2, mobile_iphone_messenger: 2, mobile_ipad: 2
+    };
+    for (const [platform, type] of Object.entries(platforms)) {
+        const info = create(null);
+        info.context.window.location = { search: '?vk_platform=' + platform + '&vk_language=ru' };
+        info.context.navigator = { userAgent: 'Other', language: 'en-US' };
+        check(info.lib.UniWebVK_GetDeviceType(), type, 'VK platform ' + platform);
+        check(info.strings.get(info.lib.UniWebVK_GetLanguage()), 'ru', 'VK language has priority over browser');
+        check(info.scripts.length, 0, 'classification does not await SDK load');
+    }
+    for (const [query, navigator, device, language] of [
+        ['', { userAgent: 'Android', language: 'de-DE' }, 2, 'de-DE'],
+        ['', { userAgent: 'Macintosh', platform: 'MacIntel', maxTouchPoints: 5, language: 'en' }, 2, 'en'],
+        ['', { userAgent: 'Windows NT 10.0', language: 'en-US' }, 1, 'en-US'],
+        ['', { userAgent: 'SmartTV Android TV', language: 'ru' }, 0, 'ru'],
+        ['', { userAgent: 'Other' }, 0, 'en'],
+        ['?vk_language=ua', { userAgent: 'Other' }, 0, 'uk'],
+        ['?vk_language=kz', { userAgent: 'Other' }, 0, 'kk'],
+        ['?vk_platform=invalid&vk_language=???', { userAgent: 'Windows NT', languages: ['pt_br'] }, 1, 'pt-BR']
+    ]) {
+        const info = create(null);
+        info.context.window.location = { search: query };
+        info.context.navigator = navigator;
+        check(info.lib.UniWebVK_GetDeviceType(), device, 'browser device fallback');
+        check(info.strings.get(info.lib.UniWebVK_GetLanguage()), language, 'language fallback/aliases');
+    }
+    const launchSdk = sdk(), launch = deferred(), late = create(launchSdk.bridge);
+    launchSdk.launchParams = launch.promise;
+    late.context.window.location = { search: '' };
+    late.context.navigator = { userAgent: 'Windows NT', language: 'en-US' };
+    check(late.lib.UniWebVK_GetDeviceType(), 1, 'immediate device before SDK');
+    late.lib.UniWebVK_RegisterRuntime('environment');
+    launchSdk.init.resolve({ result: true });
+    await flush();
+    launch.resolve({ vk_platform: 'mobile_ipad', vk_language: 'ru' });
+    await flush();
+    check(late.lib.UniWebVK_GetDeviceType(), 2, 'SDK can refine initial browser classification');
+    check(late.strings.get(late.lib.UniWebVK_GetLanguage()), 'ru', 'late SDK language applied');
+    check(late.messages.some(message => message.method === 'OnVKEnvironmentChanged'), true, 'late SDK change notification');
+    launchSdk.launchParams = { vk_platform: 'desktop_web', vk_language: 'en' };
+    launchSdk.notify({ detail: { type: 'VKWebAppViewRestore' } });
+    await flush();
+    check(late.lib.UniWebVK_GetDeviceType(), 1, 'resume refreshes environment');
+    check(late.strings.get(late.lib.UniWebVK_GetLanguage()), 'en', 'resume refreshes platform locale');
     console.log(`PASS: ${checks} VK JavaScript bridge checks`);
 })().catch(error => { console.error(error); process.exitCode = 1; });

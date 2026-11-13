@@ -47,6 +47,8 @@ namespace UniWebKit
                     builder.Register<VKGamesPlatformProvider>(Lifetime.Singleton).As<IPlatformProvider>();
                     builder.Register<VKGamesProfileProvider>(Lifetime.Singleton).As<IProfileProvider>();
                     builder.Register<VKGamesPauseProvider>(Lifetime.Singleton).As<IPauseProvider>();
+                    builder.Register<VKGamesEnvirProvider>(Lifetime.Singleton).As<IEnvirProvider>();
+                    builder.Register<VKGamesLocalizationProvider>(Lifetime.Singleton).As<ILocalizationProvider>();
                     builder.Register<VKGamesInAppProvider>(Lifetime.Singleton).As<IInAppProvider>();
                     builder.Register<VKGamesAdvProvider>(Lifetime.Singleton).As<IAdvProvider>();
                     builder.Register<IPlayerProvider>(_ => new VKGamesPlayerProvider(settings.PlayerStorage), Lifetime.Singleton);

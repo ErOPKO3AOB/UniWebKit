@@ -52,6 +52,8 @@ namespace UniWebKit
                     platform = new VKGamesPlatformProvider();
                     profile = new VKGamesProfileProvider();
                     pause = new VKGamesPauseProvider();
+                    envir = new VKGamesEnvirProvider();
+                    localization = new VKGamesLocalizationProvider();
                     ads = new VKGamesAdvProvider();
                     inApps = new VKGamesInAppProvider();
                     player = new VKGamesPlayerProvider(settings.PlayerStorage);

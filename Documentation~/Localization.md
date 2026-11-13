@@ -68,19 +68,25 @@ public class GameLanguage : MonoBehaviour
   `onSwitchLang`. Работает с выбранной в PluginYG2 площадкой. Стратегию начального
   определения и сохранения языка задаёт сам SDK; UniWebKit её не переопределяет.
   Без модуля Localization используется локальное поведение.
+- **VKGames:** `vk_language` из `VKWebAppGetLaunchParams`, затем из URL запуска,
+  затем `navigator.languages` / `navigator.language`; если язык неизвестен — `en`.
+  Коды VK `ua` и `kz` приводятся к `uk` и `kk`. Начальный язык доступен сразу;
+  поздний ответ SDK или возвращение в игру может уточнить его через `LanguageChanged`.
+  `SetLanguage` меняет язык только внутри игры: после явного выбора ответ SDK его
+  не перезаписывает. В Editor и нативных приложениях начальный язык берётся из Unity.
 - **Local:** язык `Application.systemLanguage` (неизвестный → `en`) и переключение
-  в памяти. Используется для Custom, VKGames и как безопасное поведение по умолчанию.
+  в памяти. Используется для Custom и как безопасное поведение по умолчанию.
   В WebGL системный язык Unity не заменяет определение языка SDK площадки.
 
-Адаптеры дожидаются готовности SDK, затем подписываются и публикуют начальный язык.
+Адаптеры GamePush и PluginYG2 дожидаются готовности SDK, затем подписываются и публикуют начальный язык.
 Временный объект ожидания уничтожается после готовности или `Dispose`; постоянного
 покадрового опроса нет. Это учитывает сброс событий при старте PluginYG2 в Editor.
 Если SDK не готов, ожидание продолжается до его готовности или освобождения провайдера.
 
 Модуль не переводит тексты, не хранит таблицы, не требует TextMeshPro или Unity Localization.
 Подключите словари, Unity Localization или другую систему в обработчике `LanguageChanged`.
-Список переводов игры и выбор резервного языка принадлежат игре. Локальный провайдер
-не сохраняет выбор между запусками; если нужно, используйте систему прогресса игры.
+Список переводов игры и выбор резервного языка принадлежат игре. Local и VKGames
+не сохраняют выбор между запусками; если нужно, используйте систему прогресса игры.
 
 ## Своя площадка
 
@@ -99,4 +105,6 @@ UniWebBridge.Initialize(localization: new LocalLocalizationProvider("en"));
 
 Источники: [PluginYG2 Localization](https://max-games.ru/plugin-yg/doc/lang/),
 [GamePush Unity SDK](https://github.com/GamePushService/GamePush-Unity-plugin#gp_language).
+Параметры VK сверены с [типами VK Bridge](https://github.com/VKCOM/vk-bridge/blob/master/packages/core/src/types/data.ts)
+и [значениями платформ и языков](https://github.com/VKCOM/vk-bridge/blob/master/packages/core/src/types/data/values.ts).
 Сигнатуры также сверены с установленными локально исходниками SDK.

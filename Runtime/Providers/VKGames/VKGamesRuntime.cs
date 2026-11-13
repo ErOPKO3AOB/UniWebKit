@@ -7,7 +7,7 @@ using UnityEngine.Scripting;
 
 namespace UniWebKit
 {
-    // One main-thread receiver shared by platform/profile/pause/payment providers.
+    // One main-thread receiver shared by VK providers, including environment updates.
     internal sealed class VKGamesRuntime : MonoBehaviour
     {
         [Serializable]
@@ -25,6 +25,7 @@ namespace UniWebKit
         private readonly List<string> _expired = new List<string>();
         internal event Action<bool> PauseChanged;
         internal event Action ProfileInvalidated;
+        internal event Action EnvironmentChanged;
         internal bool IsPaused { get; private set; }
         internal static bool IsBrowser
         {
@@ -60,6 +61,31 @@ namespace UniWebKit
 #else
             return false;
 #endif
+        }
+
+        internal static EnvirDeviceType DeviceType
+        {
+            get
+            {
+#if UNITY_WEBGL && !UNITY_EDITOR
+                int value = UniWebVK_GetDeviceType();
+                return value == 1 ? EnvirDeviceType.Desktop : value == 2 ? EnvirDeviceType.Mobile : EnvirDeviceType.Unknown;
+#else
+                return EnvirDeviceType.Unknown;
+#endif
+            }
+        }
+
+        internal static string Language
+        {
+            get
+            {
+#if UNITY_WEBGL && !UNITY_EDITOR
+                return LocalizationProviderBase.NormalizeLanguage(UniWebVK_GetLanguage()) ?? "en";
+#else
+                return LocalLocalizationProvider.SystemLanguageCode();
+#endif
+            }
         }
 
         internal static Action Request(string operation, string value, Action<Reply> callback, bool transaction = false)
@@ -110,6 +136,9 @@ namespace UniWebKit
         [Preserve]
         private void OnVKProfileInvalidated(string value) => UniWebCallbacks.Raise(ProfileInvalidated);
 
+        [Preserve]
+        private void OnVKEnvironmentChanged(string value) => UniWebCallbacks.Raise(EnvironmentChanged);
+
         private void Update()
         {
             _expired.Clear();
@@ -128,6 +157,7 @@ namespace UniWebKit
             foreach (var id in requests) Complete(id, Failure(UniWebErrorCode.Disposed, "VK runtime was destroyed."));
             PauseChanged = null;
             ProfileInvalidated = null;
+            EnvironmentChanged = null;
         }
 
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -135,6 +165,8 @@ namespace UniWebKit
         [DllImport("__Internal")] private static extern void UniWebVK_UnregisterRuntime(string host);
         [DllImport("__Internal")] private static extern void UniWebVK_Request(string host, string id, string operation, string value);
         [DllImport("__Internal")] private static extern int UniWebVK_SupportsMethod(string method);
+        [DllImport("__Internal")] private static extern int UniWebVK_GetDeviceType();
+        [DllImport("__Internal")] private static extern string UniWebVK_GetLanguage();
 #endif
     }
 }

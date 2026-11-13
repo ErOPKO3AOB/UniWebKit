@@ -43,12 +43,8 @@ namespace YG
 }
 namespace UniWebKit
 {
-    public interface IEnvirProvider { }
     public interface IPlayerProvider : IDisposable { }
-    public interface ILocalizationProvider : IDisposable { }
     public interface ILeaderboardProvider : IDisposable { }
-    public class UnityEnvirProvider : IEnvirProvider { }
     public class LocalPrefsPlayerProvider : IPlayerProvider { public void Dispose() { } }
-    public class LocalLocalizationProvider : ILocalizationProvider { public void Dispose() { } }
     public class UnsupportedLeaderboardProvider : ILeaderboardProvider { public void Dispose() { } }
 }

@@ -18,6 +18,28 @@ static class Program
 
     static void Main()
     {
+        var vkEnvironment = new VKGamesEnvirProvider();
+        Check(vkEnvironment.IsDesktop && vkEnvironment.IsReady, "VK Editor uses Unity desktop classification");
+        UnityEngine.SystemInfo.deviceType = UnityEngine.DeviceType.Handheld;
+        Check(vkEnvironment.IsMobile && !vkEnvironment.IsDesktop, "VK Editor handheld fallback");
+        UnityEngine.SystemInfo.deviceType = UnityEngine.DeviceType.Unknown;
+        Check(!vkEnvironment.IsReady && !vkEnvironment.IsMobile && !vkEnvironment.IsDesktop, "unknown device does not become desktop");
+        UnityEngine.SystemInfo.deviceType = UnityEngine.DeviceType.Desktop;
+        var vkLanguage = new VKGamesLocalizationProvider();
+        Check(vkLanguage.Language == "ru" && vkLanguage.IsReady, "VK Editor system language fallback");
+        var synchronize = typeof(VKGamesLocalizationProvider).GetMethod("SynchronizeLanguage", BindingFlags.Instance | BindingFlags.NonPublic);
+        int languageChanges = 0;
+        vkLanguage.LanguageChanged += _ => languageChanges++;
+        UnityEngine.Application.systemLanguage = UnityEngine.SystemLanguage.English;
+        synchronize.Invoke(vkLanguage, null);
+        Check(vkLanguage.Language == "en" && languageChanges == 1, "automatic language update");
+        Check(vkLanguage.SetLanguage("PT_br") && vkLanguage.Language == "pt-BR", "VK local language selection");
+        UnityEngine.Application.systemLanguage = UnityEngine.SystemLanguage.Russian;
+        synchronize.Invoke(vkLanguage, null);
+        Check(vkLanguage.Language == "pt-BR" && languageChanges == 2, "late SDK language does not overwrite game choice");
+        Check(!vkLanguage.SetLanguage("??") && languageChanges == 2, "invalid locale rejected");
+        vkLanguage.Dispose(); synchronize.Invoke(vkLanguage, null);
+        Check(!vkLanguage.IsReady && !vkLanguage.SetLanguage("ru") && languageChanges == 2, "disposed VK locale stays detached");
         var platform = new Platform();
         int ready = 0;
         platform.Initialized += () => { Check(platform.IsReady, "ready before notification"); ready++; };
@@ -134,6 +156,6 @@ static class Program
         localPause.SetPaused(true);
         Check(!localPause.IsSupported && !UniWebBridge.Platform.IsSupported && !UniWebBridge.Game.IsSupported,
             "bridge replaces providers and restores fallbacks");
-        Console.WriteLine($"PASS: {checks} platform/profile/pause/IAP checks");
+Console.WriteLine($"PASS: {checks} platform/profile/pause/IAP/environment/localization checks");
     }
 }

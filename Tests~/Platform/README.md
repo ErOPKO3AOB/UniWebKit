@@ -8,7 +8,8 @@ dotnet run --project Tests~/Platform/Platform.Tests.csproj
 
 Compiles actual contracts, base classes, VK providers and PluginYG2 IAP adapter
 against managed Unity/SDK doubles. Covers initialization, profile comparison,
-overlapping pause reasons, snapshot events, Pending orders, disposal and static
+overlapping pause reasons, snapshot events, Pending orders, VK device/language fallback,
+manual language selection, disposal and static
 bridge replacement. Native replies are simulated; no real account or payment is used.
 
 The VK JavaScript scenarios and Emscripten link check live under `Tests~/VKAds`.

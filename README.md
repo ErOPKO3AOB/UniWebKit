@@ -107,13 +107,13 @@ GamePush поддерживает ручную консумацию: игра с
 
 ## Окружение
 
-Тип устройства доступен через `UniWebBridge.Envir` или `IEnvirProvider` в VContainer: `IsMobile`, `IsDesktop`, `DeviceType`, `IsReady`. Реализованы GamePush, PluginYG2 и Unity-fallback. [Описание Envir](Documentation~/Environment.md).
+Тип устройства доступен через `UniWebBridge.Envir` или `IEnvirProvider` в VContainer: `IsMobile`, `IsDesktop`, `DeviceType`, `IsReady`. Реализованы GamePush, PluginYG2, VKGames и Unity-fallback. [Описание Envir](Documentation~/Environment.md).
 
 ## Локализация
 
 `UniWebBridge.Localization` / `ILocalizationProvider` предоставляет текущий `Language`,
 `IsReady`, `SetLanguage("en")` и событие `LanguageChanged`. Поддерживаются GamePush,
-PluginYG2 и локальный fallback. Коды языков — обычные строки, без enum SDK.
+PluginYG2, VKGames и локальный fallback. Коды языков — обычные строки, без enum SDK.
 Модуль подключается к любой системе переводов игры.
 [Настройка и примеры](Documentation~/Localization.md).
 

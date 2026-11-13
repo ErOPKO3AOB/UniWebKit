@@ -11,6 +11,8 @@ var UniWebVKBridge = {
         documentHidden: false,
         domListenersAttached: false,
         runtimeHosts: {},
+        environment: null,
+        environmentFetching: false,
         baitStarted: false,
         ads: {
             interstitial: { ready: false, checking: false, nextCheck: 0 },
@@ -38,6 +40,89 @@ var UniWebVKBridge = {
         supports: function(method) {
             return this.initCompleted && this.bridge && typeof this.bridge.send === 'function' &&
                 (typeof this.bridge.supports !== 'function' || this.bridge.supports(method));
+        },
+
+        languageCode: function(value) {
+            if (typeof value !== 'string') return '';
+            var parts = value.trim().replace(/_/g, '-').split('-');
+            if (!/^[a-zA-Z]{2,8}$/.test(parts[0])) return '';
+            parts[0] = parts[0].toLowerCase();
+            if (parts[0] === 'ua') parts[0] = 'uk';
+            if (parts[0] === 'kz') parts[0] = 'kk';
+            for (var i = 1; i < parts.length; i++) {
+                if (!/^[a-zA-Z0-9]{1,8}$/.test(parts[i])) return '';
+                parts[i] = parts[i].length === 2 ? parts[i].toUpperCase()
+                    : parts[i].length === 4 ? parts[i][0].toUpperCase() + parts[i].slice(1).toLowerCase()
+                    : parts[i].toLowerCase();
+            }
+            return parts.join('-');
+        },
+
+        platformDevice: function(platform) {
+            switch (platform) {
+                case 'desktop_web': case 'desktop_web_messenger': case 'desktop_app_messenger': return 1;
+                case 'mobile_web': case 'mobile_android': case 'mobile_android_messenger':
+                case 'mobile_iphone': case 'mobile_iphone_messenger': case 'mobile_ipad': return 2;
+                default: return 0;
+            }
+        },
+
+        browserDevice: function() {
+            if (typeof navigator === 'undefined') return 0;
+            var ua = navigator.userAgent || '';
+            if (/smart[- ]?tv|hbbtv|googletv|appletv|android tv|tizen|webos|playstation|xbox|nintendo/i.test(ua)) return 0;
+            // iPadOS can request desktop pages and report a Macintosh user agent.
+            if (/iPad|iPhone|iPod|Android|Mobile/i.test(ua) ||
+                navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) return 2;
+            if (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean')
+                return navigator.userAgentData.mobile ? 2 : 1;
+            return /Windows NT|Macintosh|X11|CrOS|Linux x86_64|Linux i[3-6]86/i.test(ua) ? 1 : 0;
+        },
+
+        resolveEnvironment: function(params) {
+            var query = null;
+            try {
+                if (typeof window !== 'undefined' && window.location && typeof URLSearchParams !== 'undefined')
+                    query = new URLSearchParams(window.location.search);
+            } catch (_) { }
+            var platform = params && params.vk_platform;
+            var language = this.languageCode(params && params.vk_language);
+            var device = this.platformDevice(platform);
+            if (!device && query) device = this.platformDevice(query.get('vk_platform'));
+            if (!language && query) language = this.languageCode(query.get('vk_language'));
+            if (!language && typeof navigator !== 'undefined') {
+                var languages = navigator.languages || [];
+                for (var i = 0; i < languages.length && !language; i++) language = this.languageCode(languages[i]);
+                if (!language) language = this.languageCode(navigator.language);
+            }
+            return { deviceType: device || this.browserDevice(), language: language || 'en' };
+        },
+
+        setEnvironment: function(value) {
+            var previous = this.environment;
+            this.environment = value;
+            if (!previous || previous.deviceType !== value.deviceType || previous.language !== value.language)
+                this.notifyHosts('OnVKEnvironmentChanged', '');
+        },
+
+        getEnvironment: function() {
+            if (!this.environment) this.setEnvironment(this.resolveEnvironment(null));
+            return this.environment;
+        },
+
+        refreshEnvironment: function() {
+            this.getEnvironment();
+            if (this.environmentFetching) return;
+            this.environmentFetching = true;
+            var self = this;
+            this.ensureBridge(function(bridge) {
+                if (!bridge || !self.supports('VKWebAppGetLaunchParams')) { self.environmentFetching = false; return; }
+                var request = Promise.resolve().then(function() { return bridge.send('VKWebAppGetLaunchParams'); });
+                self.withTimeout(request, 15000).then(function(params) {
+                    self.environmentFetching = false;
+                    self.setEnvironment(self.resolveEnvironment(params));
+                }, function() { self.environmentFetching = false; });
+            });
         },
 
         checkAd: function(format) {
@@ -125,6 +210,7 @@ var UniWebVKBridge = {
                         self.viewHidden = false;
                         self.updatePause();
                         self.notifyHosts('OnVKProfileInvalidated', '');
+                        self.refreshEnvironment();
                     }
                 });
             }
@@ -137,7 +223,10 @@ var UniWebVKBridge = {
                 document.addEventListener('visibilitychange', function() {
                     self.documentHidden = !!document.hidden;
                     self.updatePause();
-                    if (!self.documentHidden) self.notifyHosts('OnVKProfileInvalidated', '');
+                    if (!self.documentHidden) {
+                        self.notifyHosts('OnVKProfileInvalidated', '');
+                        self.refreshEnvironment();
+                    }
                 });
             }
         },
@@ -256,6 +345,14 @@ var UniWebVKBridge = {
         return vkState.supports(UTF8ToString(methodPtr)) ? 1 : 0;
     },
 
+    UniWebVK_GetDeviceType: function() {
+        return vkState.getEnvironment().deviceType;
+    },
+
+    UniWebVK_GetLanguage: function() {
+        return vkState.allocString(vkState.getEnvironment().language);
+    },
+
     UniWebVK_RegisterRuntime__deps: ['$UTF8ToString'],
     UniWebVK_RegisterRuntime: function(hostPtr) {
         var host = UTF8ToString(hostPtr);
@@ -263,6 +360,7 @@ var UniWebVKBridge = {
         vkState.attachLifecycleListeners(null);
         vkState.send(host, 'OnVKPause', vkState.isPaused ? '1' : '0');
         vkState.ensureBridge(function() {});
+        vkState.refreshEnvironment();
     },
 
     UniWebVK_UnregisterRuntime__deps: ['$UTF8ToString'],

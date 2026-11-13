@@ -13,7 +13,9 @@ operation. Unity audio/logging and the AOT attribute use small test doubles.
 
 The JavaScript checks require Node 12+. They run the actual `.jslib` after replacing
 only Emscripten `makeDynCall` macros with direct calls. They simulate SDK startup,
-ad inventory, success/failure, concurrent requests and SDK script loading.
+ad inventory, success/failure, concurrent requests and SDK script loading. They also
+cover VK launch parameters, browser device/language fallback, language aliases and
+environment changes after SDK initialization or resume.
 
 For a real Emscripten link check, use Unity's bundled toolchain and its `.emscripten`
 configuration, with the output under `obj`:

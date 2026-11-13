@@ -13,6 +13,8 @@ extern int UniWebVK_IsAdBlockEnabled(void);
 extern void UniWebVK_ShowNativeAds(const char *format, void (*opened)(void), void (*result)(int), void (*error)(int));
 extern void UniWebVK_ShowBannerAd(const char *location, const char *layout);
 extern void UniWebVK_HideBannerAd(void);
+extern int UniWebVK_GetDeviceType(void);
+extern char *UniWebVK_GetLanguage(void);
 extern void UniWebVK_RegisterRuntime(const char *host);
 extern void UniWebVK_UnregisterRuntime(const char *host);
 extern int UniWebVK_SupportsMethod(const char *method);
@@ -27,6 +29,8 @@ int main(void) {
     UniWebVK_ShowNativeAds("reward", opened, result, result);
     UniWebVK_ShowBannerAd("bottom", "resize");
     UniWebVK_HideBannerAd();
+    received += UniWebVK_GetDeviceType();
+    free(UniWebVK_GetLanguage());
     UniWebVK_RegisterRuntime("receiver");
     received += UniWebVK_SupportsMethod("VKWebAppGetUserInfo");
     UniWebVK_Request("receiver", "init", "init", "");
