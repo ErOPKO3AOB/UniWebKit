@@ -2,9 +2,9 @@ using UnityEngine;
 
 namespace UniWebKit
 {
-    [CreateAssetMenu(fileName = "UniWebSettings", menuName = "UniWeb/Settings")]
     public class UniWebSettings : ScriptableObject
     {
+        public const string ResourceName = "UniWebSettings";
         public enum TargetPlatform { Custom, GamePush, PluginYG2, VKGames }
 
         public TargetPlatform CurrentPlatform = TargetPlatform.Custom;

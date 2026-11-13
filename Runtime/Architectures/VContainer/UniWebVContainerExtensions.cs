@@ -8,7 +8,7 @@ namespace UniWebKit
     {
         public static void RegisterUniWeb(this IContainerBuilder builder)
         {
-            var settings = Resources.Load<UniWebSettings>("UniWebSettings");
+            var settings = Resources.Load<UniWebSettings>(UniWebSettings.ResourceName);
             // Shadow fallbacks remain valid even if the settings asset is absent.
             builder.Register<UnsupportedAdvProvider>(Lifetime.Singleton).As<IAdvProvider>();
             builder.Register<UnsupportedInAppProvider>(Lifetime.Singleton).As<IInAppProvider>();

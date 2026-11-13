@@ -18,7 +18,7 @@
    ```text
    [https://github.com/ErOPKO3AOB/UniWebKit.git](https://github.com/ErOPKO3AOB/UniWebKit.git)
    ```
-2. Создайте конфигурационный файл настроек `UniWebSettings` и поместите его в папку `Resources` (`Assets/Resources/UniWebSettings.asset`).
+2. Откройте `Window → UniWeb API Settings` или `Project Settings → UniWeb API`. Оба окна используют единственный конфиг `Assets/UniWebKit/Resources/UniWebSettings.asset` и создают его при отсутствии. Старый конфиг из `Assets/Resources/UniWebSettings.asset` автоматически переносится с сохранением GUID, если нового ещё нет. Если существуют оба, сначала оставьте нужные настройки в едином конфиге и удалите старый: два одноимённых ресурса создают неоднозначность при загрузке.
 3. Выберите в инспекторе целевую платформу (`PluginYG2`, `GamePush`, `Custom`) и архитектуру (`VContainer` или `Static`).
 
 ---

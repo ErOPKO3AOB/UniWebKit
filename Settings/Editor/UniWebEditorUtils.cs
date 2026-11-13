@@ -1,4 +1,4 @@
-using System.IO;
+using System;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.Build;
@@ -8,24 +8,43 @@ namespace UniWebKit
 {
     public static class UniWebEditorUtils
     {
-        private const string SettingsFileName = "UniWebSettings.asset";
+        public const string ResourcesFolderPath = "Assets/UniWebKit/Resources";
+        public const string SettingsAssetPath = ResourcesFolderPath + "/" + UniWebSettings.ResourceName + ".asset";
+        private const string LegacySettingsAssetPath = "Assets/Resources/UniWebSettings.asset";
 
-        private const string ResourcesFolderPath = "Assets/UniWebKit/Resources";
-        private const string SettingsAssetPath = ResourcesFolderPath + "/" + SettingsFileName;
+        [MenuItem("Assets/Create/UniWeb/Settings")]
+        public static void SelectOrCreateSettings()
+        {
+            var settings = GetOrCreateSettings();
+            Selection.activeObject = settings;
+            EditorGUIUtility.PingObject(settings);
+        }
 
         public static UniWebSettings GetOrCreateSettings()
         {
             var settings = AssetDatabase.LoadAssetAtPath<UniWebSettings>(SettingsAssetPath);
+            var legacy = AssetDatabase.LoadAssetAtPath<UniWebSettings>(LegacySettingsAssetPath);
+            if (settings != null && legacy != null)
+                throw new InvalidOperationException($"Two UniWebSettings assets exist. Keep {SettingsAssetPath} and remove the obsolete {LegacySettingsAssetPath} after checking its settings and references.");
             if (settings != null) return settings;
-
-            settings = ScriptableObject.CreateInstance<UniWebSettings>();
 
             if (!AssetDatabase.IsValidFolder(ResourcesFolderPath))
             {
-                Directory.CreateDirectory(ResourcesFolderPath);
-                AssetDatabase.Refresh();
+                if (!AssetDatabase.IsValidFolder("Assets/UniWebKit"))
+                    AssetDatabase.CreateFolder("Assets", "UniWebKit");
+                AssetDatabase.CreateFolder("Assets/UniWebKit", "Resources");
             }
 
+            // Older installations used Assets/Resources. Move the asset without changing its GUID/data.
+            if (legacy != null)
+            {
+                var error = AssetDatabase.MoveAsset(LegacySettingsAssetPath, SettingsAssetPath);
+                if (!string.IsNullOrEmpty(error)) throw new InvalidOperationException(error);
+                AssetDatabase.SaveAssets();
+                return legacy;
+            }
+
+            settings = ScriptableObject.CreateInstance<UniWebSettings>();
             AssetDatabase.CreateAsset(settings, SettingsAssetPath);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();

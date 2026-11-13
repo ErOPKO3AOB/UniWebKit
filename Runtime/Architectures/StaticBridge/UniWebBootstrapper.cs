@@ -10,7 +10,7 @@ namespace UniWebKit
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void AutoInit()
         {
-            var settings = Resources.Load<UniWebSettings>("UniWebSettings");
+            var settings = Resources.Load<UniWebSettings>(UniWebSettings.ResourceName);
             if (settings == null || !settings.AutoInitializeStaticAPI) return;
 
             // 1. СТЕЛЕМ СОЛОМКУ: Создаем безопасные "глухие" реализации по умолчанию
