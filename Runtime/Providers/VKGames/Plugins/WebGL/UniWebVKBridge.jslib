@@ -502,7 +502,8 @@ var UniWebVKBridge = {
             if (onErrorPtr) {{{ makeDynCall('vi', 'onErrorPtr') }}}(0);
             return;
         }
-        if (!state || !state.ready || vkState.adBusy || vkState.purchaseBusy || !vkState.supports('VKWebAppShowNativeAds')) {
+        if (!state || (adFormat !== 'reward' && !state.ready) ||
+            vkState.adBusy || vkState.purchaseBusy || !vkState.supports('VKWebAppShowNativeAds')) {
             if (onErrorPtr) {{{ makeDynCall('vi', 'onErrorPtr') }}}(1);
             return;
         }
@@ -518,7 +519,10 @@ var UniWebVKBridge = {
             state.nextCheck = 0;
             vkState.checkAd(adFormat);
             if (error) {
-                var code = error.error_data && error.error_data.error_code === 4 ? 1 : 2;
+                var sdkCode = error.error_data && error.error_data.error_code;
+                console.warn('[UniWebKit] VKWebAppShowNativeAds rejected:', adFormat,
+                    'VK error code:', typeof sdkCode === 'number' ? sdkCode : 'unknown');
+                var code = sdkCode === 4 ? 1 : 2;
                 if (onErrorPtr) {{{ makeDynCall('vi', 'onErrorPtr') }}}(code);
             } else if (onResultPtr) {
                 {{{ makeDynCall('vi', 'onResultPtr') }}}(data && data.result === true ? 1 : 0);

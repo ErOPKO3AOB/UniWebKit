@@ -121,12 +121,25 @@ function sdk() {
     await flush();
     check(errors, [1, 1, 2], 'synchronous throw returns one error');
     check(env.context.vkState.adBusy, false, 'synchronous failure releases lane');
+    vk.throwShow = false;
 
     vk.available = false;
     env.advance(6000);
     lib.UniWebVK_IsAdReady('reward');
     await flush();
     check(lib.UniWebVK_IsAdReady('reward'), 0, 'no inventory is not ready');
+    lib.UniWebVK_IsAdReady('interstitial');
+    await flush();
+    const showCount = () => vk.calls.filter(call => call[0] === 'VKWebAppShowNativeAds').length;
+    const showsBeforeClick = showCount();
+    lib.UniWebVK_ShowNativeAds('interstitial', null, null, value => errors.push(value));
+    check(showCount(), showsBeforeClick, 'unavailable interstitial is still gated');
+    vk.show = deferred();
+    lib.UniWebVK_ShowNativeAds('reward', null, value => results.push(value), value => errors.push(value));
+    check(showCount(), showsBeforeClick + 1, 'explicit rewarded request reaches VK with a negative inventory check');
+    vk.show.resolve({ result: true });
+    await flush();
+    check(results, [1, 0, 1], 'only the actual show result confirms the view');
     vk.available = true;
     env.advance(6000);
     lib.UniWebVK_IsAdReady('reward');

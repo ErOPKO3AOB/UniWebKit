@@ -83,7 +83,12 @@ namespace UniWebKit
 
         private void Show(string format, Action reward, Action opened, Action<bool> closed, Action<string> error)
         {
-            if (!IsReady(format))
+            bool canRequest = false;
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // The inventory check is advisory for an explicit rewarded request.
+            canRequest = !_disposed && _pending == null && (format == "reward" || IsReady(format));
+#endif
+            if (!canRequest)
             {
                 Invoke(() => error?.Invoke(_disposed ? "The VK ads provider has been disposed."
                     : _pending != null ? "Another VK advertisement is still pending."
