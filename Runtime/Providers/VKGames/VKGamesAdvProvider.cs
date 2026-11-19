@@ -112,7 +112,7 @@ namespace UniWebKit
         public override void ShowStickyBanner()
         {
 #if UNITY_WEBGL && !UNITY_EDITOR
-            if (!_disposed) UniWebVK_ShowBannerAd("bottom", "resize");
+            if (!_disposed) UniWebVK_ShowBannerAd("top", "resize");
 #endif
         }
 
