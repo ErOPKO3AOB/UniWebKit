@@ -190,12 +190,7 @@ namespace UniWebKit
                 }
 
                 if (needsTemplate)
-                {
-                    string stagedTemplate = Path.Combine(stage, template);
-                    CopyExistingTemplateFiles(template, stagedTemplate);
-                    MoveAsset(template, Path.Combine(backup, template), moves);
-                    MoveAsset(stagedTemplate, template, moves);
-                }
+                    InstallMissingTemplateFiles(Path.Combine(stage, template), template, moves);
 
                 settings.CurrentPlatform = target;
                 EditorUtility.SetDirty(settings);
@@ -229,29 +224,38 @@ namespace UniWebKit
 
         private static void MoveAsset(string source, string destination, List<(string Source, string Destination, bool Directory)> moves)
         {
-            if (Directory.Exists(source))
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(destination));
-                Directory.Move(source, destination);
-                moves.Add((source, destination, true));
-            }
-            if (!File.Exists(source + ".meta")) return;
-            Directory.CreateDirectory(Path.GetDirectoryName(destination));
-            File.Move(source + ".meta", destination + ".meta");
-            moves.Add((source + ".meta", destination + ".meta", false));
+            if (Directory.Exists(source)) MovePath(source, destination, moves, isDirectory: true);
+            if (File.Exists(source + ".meta")) MovePath(source + ".meta", destination + ".meta", moves);
         }
 
-        private static void CopyExistingTemplateFiles(string source, string destination)
+        private static void MovePath(string source, string destination,
+            List<(string Source, string Destination, bool Directory)> moves, bool isDirectory = false)
         {
-            if (File.Exists(source + ".meta")) File.Copy(source + ".meta", destination + ".meta", true);
-            if (!Directory.Exists(source)) return;
-            foreach (string file in Directory.GetFiles(source, "*", SearchOption.AllDirectories))
+            Directory.CreateDirectory(Path.GetDirectoryName(destination));
+            if (isDirectory) Directory.Move(source, destination);
+            else File.Move(source, destination);
+            moves.Add((source, destination, isDirectory));
+        }
+
+        private static void InstallMissingTemplateFiles(string source, string destination,
+            List<(string Source, string Destination, bool Directory)> moves)
+        {
+            if (!Directory.Exists(destination))
+                MovePath(source, destination, moves, isDirectory: true);
+            else
             {
-                string path = Path.Combine(destination, Path.GetRelativePath(source, file));
-                if (File.Exists(path)) continue;
-                Directory.CreateDirectory(Path.GetDirectoryName(path));
-                File.Copy(file, path);
+                foreach (string folder in Directory.GetDirectories(source))
+                    InstallMissingTemplateFiles(folder, Path.Combine(destination, Path.GetFileName(folder)), moves);
+
+                foreach (string file in Directory.GetFiles(source))
+                {
+                    string path = Path.Combine(destination, Path.GetFileName(file));
+                    if (!File.Exists(path)) MovePath(file, path, moves);
+                }
             }
+
+            if (File.Exists(source + ".meta") && !File.Exists(destination + ".meta"))
+                MovePath(source + ".meta", destination + ".meta", moves);
         }
 
         private static void RestoreVendorSettings(UniWebSdk sdk, string stage)
