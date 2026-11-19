@@ -28,22 +28,56 @@ namespace UniWebKit
 
         public override void ShowRewarded(Action onReward, Action onOpened = null, Action<bool> onClosed = null, Action<string> onError = null, string placementId = "default")
         {
-            // GamePush передает строковый тег награды в колбэк
-            void OnReward(string tag)
+            bool rewarded = false;
+            bool completed = false;
+
+            void GrantReward()
             {
+                if (rewarded) return;
+                rewarded = true;
                 onReward?.Invoke();
+            }
+
+            void OnReward(string _)
+            {
+                if (!completed) GrantReward();
             }
 
             void OnClose(bool success)
             {
-                if (!success)
+                if (completed) return;
+                completed = true;
+
+                // GamePush can report a successful close before the separate reward event.
+                bool earned = success || rewarded;
+                try
                 {
-                    onError?.Invoke("Показ Rewarded в GamePush завершился неуспешно или закрыт до награды.");
+                    if (earned)
+                        GrantReward();
+                    else
+                        onError?.Invoke("Показ Rewarded в GamePush завершился неуспешно или закрыт до награды.");
                 }
-                onClosed?.Invoke(success);
+                finally
+                {
+                    onClosed?.Invoke(earned);
+                }
             }
 
+#if UNITY_EDITOR
+            bool opened = false;
+
+            void OnOpened()
+            {
+                opened = true;
+                onOpened?.Invoke();
+            }
+
+            GP_Ads.ShowRewarded(placementId, OnReward, OnOpened, OnClose);
+            // The default Editor simulation invokes only the reward callback synchronously.
+            if (rewarded && !opened) OnClose(true);
+#else
             GP_Ads.ShowRewarded(placementId, OnReward, onOpened, OnClose);
+#endif
         }
 
         public override void ShowStickyBanner()
