@@ -6,11 +6,15 @@ namespace UniWebKit
 {
     public class PluginYG2AdvProvider : AdvProviderBase
     {
+#if InterstitialAdv_yg || RewardedAdv_yg || StickyAdv_yg
+        public override bool IsSupported => true;
+#else
+        public override bool IsSupported => false;
+#endif
+
+#if InterstitialAdv_yg
         // Проверяем кулдаун таймера фулскрин рекламы в YG2 (и что сейчас не открыта другая реклама)
         public override bool IsInterstitialReady => YG2.isTimerAdvCompleted && !YG2.nowAdsShow;
-
-        // Яндекс не отдает статус предзагрузки реварда заранее, проверяем только отсутствие активной рекламы
-        public override bool IsRewardedReady => !YG2.nowAdsShow;
 
         public override void ShowInterstitial(Action onOpened = null, Action<bool> onClosed = null, Action<string> onError = null)
         {
@@ -46,6 +50,11 @@ namespace UniWebKit
 
             YG2.InterstitialAdvShow();
         }
+#endif
+
+#if RewardedAdv_yg
+        // Яндекс не отдает статус предзагрузки реварда заранее, проверяем только отсутствие активной рекламы
+        public override bool IsRewardedReady => !YG2.nowAdsShow;
 
         public override void ShowRewarded(Action onReward, Action onOpened = null, Action<bool> onClosed = null, Action<string> onError = null, string placementId = "default")
         {
@@ -92,7 +101,9 @@ namespace UniWebKit
 
             YG2.RewardedAdvShow(placementId);
         }
+#endif
 
+#if StickyAdv_yg
         public override void ShowStickyBanner()
         {
             YG2.StickyAdActivity(true);
@@ -102,6 +113,7 @@ namespace UniWebKit
         {
             YG2.StickyAdActivity(false);
         }
+#endif
     }
 }
 #endif

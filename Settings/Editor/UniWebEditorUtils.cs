@@ -52,13 +52,17 @@ namespace UniWebKit
             return settings;
         }
 
-        public static void UpdateDefines(UniWebSettings settings)
+        public static void UpdateDefines(UniWebSettings settings, bool resetPluginYgSymbols = false)
         {
             var buildTarget = NamedBuildTarget.WebGL;
             var definesString = PlayerSettings.GetScriptingDefineSymbols(buildTarget);
             var defines = definesString.Split(';').ToList();
 
-            defines.RemoveAll(d => d.StartsWith("UNIWEB_"));
+            defines.RemoveAll(d => d == "UNIWEB_GAMEPUSH" || d == "UNIWEB_PLUGIN_YG2" || d == "UNIWEB_VK_GAMES" ||
+                d == "UNIWEB_ARCHITECTURE_STATIC" || d == "UNIWEB_ARCHITECTURE_VCONTAINER");
+            if (resetPluginYgSymbols || settings.CurrentPlatform != UniWebSettings.TargetPlatform.PluginYG2)
+                defines.RemoveAll(d => d.EndsWith("_yg", StringComparison.Ordinal) ||
+                    d == "PLUGIN_YG_2" || d.EndsWith("_YG2", StringComparison.Ordinal) && !d.StartsWith("UNIWEB_", StringComparison.Ordinal));
 
             switch (settings.CurrentPlatform)
             {
@@ -67,13 +71,12 @@ namespace UniWebKit
                     break;
                 case UniWebSettings.TargetPlatform.PluginYG2:
                     defines.Add("UNIWEB_PLUGIN_YG2");
+                    defines.AddRange(new[] { "PLUGIN_YG_2", "YandexGamesPlatform_yg" });
                     break;
                 case UniWebSettings.TargetPlatform.VKGames:
                     defines.Add("UNIWEB_VK_GAMES");
                     break;
             }
-
-            defines.RemoveAll(d => d.StartsWith("UNIWEB_ARCH_"));
 
             if (settings.Architecture == UniWebSettings.ArchitectureMode.VContainer)
             {
@@ -84,7 +87,7 @@ namespace UniWebKit
                 defines.Add("UNIWEB_ARCHITECTURE_STATIC");
             }
 
-            PlayerSettings.SetScriptingDefineSymbols(buildTarget, string.Join(";", defines));
+            PlayerSettings.SetScriptingDefineSymbols(buildTarget, string.Join(";", defines.Where(d => d.Length != 0).Distinct()));
             Debug.Log($"[UniWeb API] Дефайны обновлены для WebGL. Активная платформа: {settings.CurrentPlatform}");
         }
     }

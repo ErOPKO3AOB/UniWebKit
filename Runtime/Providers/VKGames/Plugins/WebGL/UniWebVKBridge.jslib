@@ -246,7 +246,7 @@ var UniWebVKBridge = {
                         if (getBridge()) { resolve(getBridge()); return; }
                         if (typeof document === 'undefined') { reject(new Error('No document.')); return; }
                         var script = document.createElement('script');
-                        script.src = 'https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js';
+                        script.src = 'TemplateData/vk-bridge.js';
                         script.onload = function() {
                             var bridge = getBridge();
                             if (bridge) resolve(bridge);

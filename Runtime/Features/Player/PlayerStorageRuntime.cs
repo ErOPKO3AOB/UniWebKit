@@ -72,7 +72,7 @@ namespace UniWebKit
         internal static void Request(string backend, string operation, string key, string profile,
             string document, string bindings, float timeout, Action<PlayerStorageBackendResult> callback)
         {
-#if UNITY_WEBGL && !UNITY_EDITOR
+#if UNITY_WEBGL && !UNITY_EDITOR && (UNIWEB_VK_GAMES || UNIWEB_GAMEPUSH)
             var instance = Instance;
             string requestId = Guid.NewGuid().ToString("N");
             instance._pending.Add(requestId, new Pending
@@ -92,7 +92,7 @@ namespace UniWebKit
         {
             get
             {
-#if UNITY_WEBGL && !UNITY_EDITOR
+#if UNITY_WEBGL && !UNITY_EDITOR && UNIWEB_VK_GAMES
                 return UniWebStorage_VkProfile();
 #else
                 return "guest";
@@ -103,7 +103,7 @@ namespace UniWebKit
         {
             get
             {
-#if UNITY_WEBGL && !UNITY_EDITOR
+#if UNITY_WEBGL && !UNITY_EDITOR && UNIWEB_VK_GAMES
                 return UniWebStorage_VkAvailable() != 0;
 #else
                 return false;
@@ -149,10 +149,12 @@ namespace UniWebKit
         internal static PlayerStorageBackendResult Failure(PlayerStorageErrorCode code, string message)
             => new PlayerStorageBackendResult(error: new PlayerStorageError(code, message));
 
-#if UNITY_WEBGL && !UNITY_EDITOR
+#if UNITY_WEBGL && !UNITY_EDITOR && (UNIWEB_VK_GAMES || UNIWEB_GAMEPUSH)
         [DllImport("__Internal")]
         private static extern void UniWebStorage_Request(string host, string id, string backend, string operation,
             string key, string profile, string document, string bindings);
+#endif
+#if UNITY_WEBGL && !UNITY_EDITOR && UNIWEB_VK_GAMES
         [DllImport("__Internal")] private static extern string UniWebStorage_VkProfile();
         [DllImport("__Internal")] private static extern int UniWebStorage_VkAvailable();
 #endif

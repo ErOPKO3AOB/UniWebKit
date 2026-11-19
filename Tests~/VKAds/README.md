@@ -21,7 +21,7 @@ For a real Emscripten link check, use Unity's bundled toolchain and its `.emscri
 configuration, with the output under `obj`:
 
 ```text
-emcc Tests~/VKAds/link-smoke.c --js-library Runtime/Providers/VKGames/Plugins/WebGL/UniWebVKBridge.jslib --js-library Runtime/Plugins/WebGL/UniWebStorage.jslib -O2 -sENVIRONMENT=node -o Tests~/VKAds/obj/link-smoke.js
+emcc Tests~/VKAds/link-smoke.c --js-library Runtime/Providers/VKGames/Plugins/WebGL/UniWebVKBridge.jslib --js-library Runtime/Plugins/WebGL/UniWebStorage.jslib --js-library Runtime/Plugins/WebGL/UniWebVKStorage.jslib -O2 -sENVIRONMENT=node -o Tests~/VKAds/obj/link-smoke.js
 node Tests~/VKAds/obj/link-smoke.js
 ```
 

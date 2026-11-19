@@ -12,12 +12,12 @@ namespace UniWebKit
                 guiHandler = (searchContext) =>
                 {
                     var settings = UniWebEditorUtils.GetOrCreateSettings();
+                    UniWebSdkInstaller.DrawPicker(settings);
                     SerializedObject so = new SerializedObject(settings);
 
                     // Начинаем следить за изменениями в UI
                     EditorGUI.BeginChangeCheck();
 
-                    EditorGUILayout.PropertyField(so.FindProperty("CurrentPlatform"));
                     EditorGUILayout.PropertyField(so.FindProperty("Architecture"));
 
                     if (EditorGUI.EndChangeCheck())

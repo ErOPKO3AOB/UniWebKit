@@ -34,12 +34,12 @@ namespace UniWebKit
             EditorGUILayout.LabelField("Unified Web Games Kit Configuration", EditorStyles.boldLabel);
             EditorGUILayout.Space();
 
+            UniWebSdkInstaller.DrawPicker(_settings);
             _serializedSettings.Update();
 
             // Следим за изменениями, точно так же, как в SettingsProvider
             EditorGUI.BeginChangeCheck();
 
-            EditorGUILayout.PropertyField(_serializedSettings.FindProperty("CurrentPlatform"));
             EditorGUILayout.PropertyField(_serializedSettings.FindProperty("Architecture"));
 
             if (EditorGUI.EndChangeCheck())
